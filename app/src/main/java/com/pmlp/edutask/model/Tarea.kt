@@ -1,12 +1,12 @@
 package com.pmlp.edutask.model
 
-import java.time.LocalDateTime
+import java.util.Date
 
 data class Tarea(
-    val idTarea: Int,
-    val titulo: String,
-    val descripcion: String,
-    val fechaLimite: LocalDateTime,
-    val idClase: Int,
+    val idTarea: String = "",
+    val titulo: String = "",
+    val descripcion: String = "",
+    val fechaLimite: Date = Date(),
+    val idClase: String = "",
     val nombreClase: String = ""
 )

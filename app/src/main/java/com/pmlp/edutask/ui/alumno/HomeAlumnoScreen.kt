@@ -27,16 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-
-private val CLASES = listOf("PMLP - Prog. Movil", "BD - Bases de Datos", "IS - Ing. Software")
-private val TAREAS = listOf(
-    Tarea(1, "Evidencia Actividad 3",       "Captura de pantalla", LocalDateTime.now().plusHours(6),  1, "PMLP") to EstadoEvidencia.Pendiente,
-    Tarea(2, "Diagrama ER - Proyecto Final","Modelo ER completo",   LocalDateTime.now().plusDays(5),  2, "BD")   to EstadoEvidencia.Aprobada,
-    Tarea(3, "Casos de Uso del Sistema",    "Documento UML",        LocalDateTime.now().minusDays(1), 3, "IS")   to EstadoEvidencia.Rechazada,
-    Tarea(4, "Prototipo Figma - Sprint 2",  "Pantallas hi-fi",      LocalDateTime.now().plusDays(3),  1, "PMLP") to EstadoEvidencia.Pendiente
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import java.text.SimpleDateFormat
 
 private data class NavItem(val label: String, val icon: ImageVector)
 private val NAV_ITEMS = listOf(
@@ -49,8 +41,10 @@ private val NAV_ITEMS = listOf(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun HomeAlumnoScreen(
+    idUsuario: String    = "",
     nombreAlumno: String = "Juan Ramirez",
     carrera: String      = "Ingenieria de Software",
+    viewModel: HomeAlumnoViewModel = viewModel(),
     onSubirEvidencia: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
@@ -60,10 +54,18 @@ fun HomeAlumnoScreen(
 
     var selectedNav       by remember { mutableIntStateOf(0) }
     var claseSelected     by remember { mutableStateOf<String?>(null) }
-    val pendienteCount    = TAREAS.count { (_, e) -> e == EstadoEvidencia.Pendiente }
-    val initials          = nombreAlumno.split(" ").take(2).joinToString("") { it.first().toString().uppercase() }
-    val tareasFiltradas   = if (claseSelected == null) TAREAS
-                            else TAREAS.filter { (t, _) -> claseSelected!!.startsWith(t.nombreClase) }
+    
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(idUsuario) {
+        viewModel.fetchUserData(idUsuario)
+    }
+
+    val pendienteCount = if (uiState is HomeAlumnoState.Success) {
+        (uiState as HomeAlumnoState.Success).tareas.count { (_, e) -> e == EstadoEvidencia.Pendiente }
+    } else 0
+
+    val initials = nombreAlumno.split(" ").take(2).joinToString("") { it.first().toString().uppercase() }
 
     if (isCompact) {
         Scaffold(
@@ -128,8 +130,25 @@ fun HomeAlumnoScreen(
                 )
             }
         ) { pad ->
-            TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
-                          tareasFiltradas, pendienteCount)
+            when (uiState) {
+                is HomeAlumnoState.Loading -> {
+                    Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is HomeAlumnoState.Error -> {
+                    Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                        Text("Error al cargar datos.", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                is HomeAlumnoState.Success -> {
+                    val data = uiState as HomeAlumnoState.Success
+                    val tareasFiltradas = if (claseSelected == null) data.tareas
+                                          else data.tareas.filter { (t, _) -> t.nombreClase == claseSelected }
+                    TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
+                                  tareasFiltradas, pendienteCount, data.clases)
+                }
+            }
         }
     } else {
         Row(Modifier.fillMaxSize()) {
@@ -177,8 +196,25 @@ fun HomeAlumnoScreen(
                              )
                          )
                      }) { pad ->
-                TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
-                              tareasFiltradas, pendienteCount)
+                when (uiState) {
+                    is HomeAlumnoState.Loading -> {
+                        Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is HomeAlumnoState.Error -> {
+                        Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                            Text("Error al cargar datos.", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    is HomeAlumnoState.Success -> {
+                        val data = uiState as HomeAlumnoState.Success
+                        val tareasFiltradas = if (claseSelected == null) data.tareas
+                                              else data.tareas.filter { (t, _) -> t.nombreClase == claseSelected }
+                        TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
+                                      tareasFiltradas, pendienteCount, data.clases)
+                    }
+                }
             }
         }
     }
@@ -186,7 +222,7 @@ fun HomeAlumnoScreen(
 
 @Composable
 private fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (String) -> Unit,
-                          tareas: List<Pair<Tarea, EstadoEvidencia>>, pendienteCount: Int) {
+                          tareas: List<Pair<Tarea, EstadoEvidencia>>, pendienteCount: Int, clases: List<String>) {
     LazyColumn(modifier = modifier.fillMaxSize(),
                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
                verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -195,7 +231,7 @@ private fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSel
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(end = 8.dp)) {
-                items(CLASES) { clase ->
+                items(clases) { clase ->
                     val chipColor by animateColorAsState(
                         targetValue = if (claseSelected == clase) MaterialTheme.colorScheme.primaryContainer
                                       else MaterialTheme.colorScheme.surface,
@@ -220,10 +256,9 @@ private fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSel
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun TareaCard(tarea: Tarea, estado: EstadoEvidencia) {
-    val fmt = DateTimeFormatter.ofPattern("dd MMM, HH:mm")
+    val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
     ElevatedCard(modifier = Modifier.fillMaxWidth(),
                  elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
                  colors    = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {

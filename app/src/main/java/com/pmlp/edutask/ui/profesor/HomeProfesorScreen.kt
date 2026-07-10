@@ -52,6 +52,7 @@ private val PROF_NAV = listOf(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun HomeProfesorScreen(
+    idUsuario: String        = "",
     nombreProfesor: String   = "Mtro. Perez",
     claseActual: String      = "Programacion Movil PMLP",
     onCrearTarea: () -> Unit = {},

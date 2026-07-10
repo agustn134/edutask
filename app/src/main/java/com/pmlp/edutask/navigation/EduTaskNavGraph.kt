@@ -12,11 +12,11 @@ import com.pmlp.edutask.ui.profesor.HomeProfesorScreen
 
 object EduTaskRoutes {
     const val LOGIN         = "login"
-    const val HOME_ALUMNO   = "home_alumno/{nombre}/{carrera}"
-    const val HOME_PROFESOR = "home_profesor/{nombre}/{clase}"
+    const val HOME_ALUMNO   = "home_alumno/{idUsuario}/{nombre}/{carrera}"
+    const val HOME_PROFESOR = "home_profesor/{idUsuario}/{nombre}/{clase}"
 
-    fun homeAlumno(nombre: String, carrera: String)  = "home_alumno/${enc(nombre)}/${enc(carrera)}"
-    fun homeProfesor(nombre: String, clase: String)  = "home_profesor/${enc(nombre)}/${enc(clase)}"
+    fun homeAlumno(idUsuario: String, nombre: String, carrera: String)  = "home_alumno/${enc(idUsuario)}/${enc(nombre)}/${enc(carrera)}"
+    fun homeProfesor(idUsuario: String, nombre: String, clase: String)  = "home_profesor/${enc(idUsuario)}/${enc(nombre)}/${enc(clase)}"
     private fun enc(s: String) = s.replace(" ", "_").replace(".", "-")
     fun dec(s: String?) = s?.replace("_", " ")?.replace("-", ".") ?: ""
 }
@@ -26,11 +26,11 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
     NavHost(navController = navController, startDestination = EduTaskRoutes.LOGIN) {
 
         composable(EduTaskRoutes.LOGIN) {
-            LoginScreen(onLoginSuccess = { rol ->
+            LoginScreen(onLoginSuccess = { idUsuario, nombre, rol ->
                 val route = when (rol) {
-                    RolUsuario.Alumno      -> EduTaskRoutes.homeAlumno("Juan Ramirez", "Ingenieria de Software")
-                    RolUsuario.Profesor    -> EduTaskRoutes.homeProfesor("Mtro Perez", "Programacion Movil PMLP")
-                    RolUsuario.Coordinador -> EduTaskRoutes.homeProfesor("Coord Garcia", "Coordinacion Academica")
+                    RolUsuario.Alumno      -> EduTaskRoutes.homeAlumno(idUsuario, nombre, "Ingenieria de Software")
+                    RolUsuario.Profesor    -> EduTaskRoutes.homeProfesor(idUsuario, nombre, "Programacion Movil PMLP")
+                    RolUsuario.Coordinador -> EduTaskRoutes.homeProfesor(idUsuario, nombre, "Coordinacion Academica")
                 }
                 navController.navigate(route) { popUpTo(EduTaskRoutes.LOGIN) { inclusive = true } }
             })
@@ -38,6 +38,7 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
 
         composable(EduTaskRoutes.HOME_ALUMNO) { back ->
             HomeAlumnoScreen(
+                idUsuario        = EduTaskRoutes.dec(back.arguments?.getString("idUsuario")),
                 nombreAlumno     = EduTaskRoutes.dec(back.arguments?.getString("nombre")),
                 carrera          = EduTaskRoutes.dec(back.arguments?.getString("carrera")),
                 onSubirEvidencia = {},
@@ -47,6 +48,7 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
 
         composable(EduTaskRoutes.HOME_PROFESOR) { back ->
             HomeProfesorScreen(
+                idUsuario      = EduTaskRoutes.dec(back.arguments?.getString("idUsuario")),
                 nombreProfesor = EduTaskRoutes.dec(back.arguments?.getString("nombre")),
                 claseActual    = EduTaskRoutes.dec(back.arguments?.getString("clase")),
                 onCrearTarea   = {},
