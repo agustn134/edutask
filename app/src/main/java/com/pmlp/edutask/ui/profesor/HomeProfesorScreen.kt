@@ -27,10 +27,21 @@ import com.pmlp.edutask.model.EvidenciaTarea
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.model.ClaseInfo
 import com.pmlp.edutask.ui.theme.EduTaskTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pmlp.edutask.ui.EventosSharedViewModel
+import com.pmlp.edutask.ui.EventosUiState
+import com.pmlp.edutask.model.Evento
+import androidx.compose.foundation.lazy.LazyRow
 import java.util.Date
 import java.text.SimpleDateFormat
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import java.util.Locale
+
+private val EVIDENCIAS = listOf(
+    EvidenciaTarea("1", "Evidencia Act. 3 PMLP", "", Date(System.currentTimeMillis() - 2 * 3600000),  EstadoEvidencia.Pendiente, "1", "Juan Ramirez"),
+    EvidenciaTarea("2", "Diagrama ER BD",         "", Date(System.currentTimeMillis() - 5 * 3600000),  EstadoEvidencia.Pendiente, "2", "Maria Lopez"),
+    EvidenciaTarea("3", "Casos de Uso IS",        "", Date(System.currentTimeMillis() - 10 * 3600000), EstadoEvidencia.Pendiente, "3", "Carlos Torres"),
+    EvidenciaTarea("4", "App mockup PMLP",        "", Date(System.currentTimeMillis() - 24 * 3600000), EstadoEvidencia.Aprobada,  "4", "Ana Garcia")
+)
 
 private data class AccesoRapido(val label: String, val icon: ImageVector)
 private val ACCESOS = listOf(
@@ -54,10 +65,8 @@ fun HomeProfesorScreen(
     idUsuario: String        = "",
     nombreProfesor: String   = "Mtro. Perez",
     claseActual: String      = "Programacion Movil PMLP",
-    onCrearTarea: (String, String?) -> Unit = { _, _ -> },
-    onVerEvidencia: (String) -> Unit = {},
-    onVerAlumnos: (String, String) -> Unit = { _, _ -> },
-    onVerEstadisticas: (String, String) -> Unit = { _, _ -> },
+    eventosViewModel: EventosSharedViewModel = viewModel(),
+    onCrearTarea: () -> Unit = {},
     onLogout: () -> Unit     = {}
 ) {
     val winSize   = calculateWindowSizeClass(activity = androidx.compose.ui.platform.LocalContext.current as Activity)
@@ -195,6 +204,13 @@ fun HomeProfesorScreen(
     val initials   = nombreProfesor.split(" ").filter { it.length > 2 }.take(2)
         .joinToString("") { it.first().toString().uppercase() }.ifBlank { "P" }
 
+    val eventosState by eventosViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        eventosViewModel.fetchEventos()
+    }
+
+    // Diálogo para Crear Clase Nueva
     if (showClassDialog) {
         AlertDialog(
             onDismissRequest = { 
@@ -342,37 +358,14 @@ fun HomeProfesorScreen(
         }
     ) { pad ->
         Box(modifier = Modifier.padding(pad).fillMaxSize()) {
+            val eventos = if (eventosState is EventosUiState.Success) {
+                (eventosState as EventosUiState.Success).eventos
+            } else emptyList()
+
             when (selectedNav) {
-                0 -> InicioContent(
-                    pendientes = pendientes,
-                    evidencias = listaEvidencias,
-                    onVerClick = { onVerEvidencia(it.idEvidencia) }
-                )
-                1 -> TareasContent(
-                    tareas = listaTareas,
-                    clases = listaClases,
-                    idUsuario = idUsuario,
-                    onEditTarea = onCrearTarea,
-                    onDeleteTarea = { idTarea ->
-                        db.collection("tareas").document(idTarea).delete()
-                    },
-                    onVerEstadisticas = onVerEstadisticas
-                )
-                2 -> ClasesContent(
-                    clases = listaClases,
-                    inscripciones = inscripcionesMap,
-                    onEditClase = { clase ->
-                        nuevaClaseNombre = clase.nombre
-                        nuevaClaseDesc = clase.descripcion
-                        nuevaClaseEnlace = clase.enlace
-                        editingClaseId = clase.idClase
-                        showClassDialog = true
-                    },
-                    onDeleteClase = { idClase ->
-                        db.collection("clases").document(idClase).delete()
-                    },
-                    onVerAlumnos = onVerAlumnos
-                )
+                0 -> InicioContent(pendientes, claseActual, eventos, onCrearTarea)
+                1 -> TareasContent(claseActual)
+                2 -> ClasesContent()
                 3 -> PerfilContent(nombreProfesor)
             }
         }
@@ -380,14 +373,26 @@ fun HomeProfesorScreen(
 }
 
 @Composable
-private fun InicioContent(
-    pendientes: Int,
-    evidencias: List<EvidenciaTarea>,
-    onVerClick: (EvidenciaTarea) -> Unit
-) {
+private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Evento>, onCrearTarea: () -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        
+        if (eventos.isNotEmpty()) {
+            item {
+                Text("Anuncios Recientes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(eventos) { evento ->
+                        EventoCarouselCardProfesor(evento)
+                    }
+                }
+            }
+        }
+        
         item {
             ElevatedCard(modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
@@ -698,7 +703,26 @@ private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier
     }
 }
 
+<<<<<<< HEAD
 private fun generateShortCode(): String {
     val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return (1..6).map { chars.random() }.joinToString("")
+=======
+@Composable
+fun EventoCarouselCardProfesor(evento: Evento) {
+    val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
+    val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
+
+    OutlinedCard(
+        modifier = Modifier.width(260.dp).height(120.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(evento.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
+            Text(evento.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+>>>>>>> 599a1a98ec2c63adf69c105ec87a6c7a550aa56c
 }
