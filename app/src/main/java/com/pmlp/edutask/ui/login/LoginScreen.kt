@@ -31,6 +31,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.RolUsuario
 import com.pmlp.edutask.ui.theme.EduTaskTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private data class CredencialStub(val matricula: String, val pass: String, val rol: RolUsuario)
 private val CREDENCIALES = listOf(
@@ -53,13 +55,26 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
     var errorMsg        by remember { mutableStateOf<String?>(null) }
     val focusMgr        = LocalFocusManager.current
     val scroll          = rememberScrollState()
+    val scope           = rememberCoroutineScope()
 
     fun doLogin() {
         if (matricula.isBlank() || password.isBlank()) return
-        isLoading = true; errorMsg = null
-        val match = CREDENCIALES.find { it.matricula == matricula.trim() && it.pass == password }
-        isLoading = false
-        if (match != null) onLoginSuccess(match.rol) else errorMsg = "Matricula o contrasena incorrectos."
+
+        scope.launch {
+            isLoading = true
+            errorMsg = null
+            // Simulamos un pequeño retraso de consulta a la base de datos (1.5 segundos)
+            delay(1500)
+
+            val match = CREDENCIALES.find { it.matricula == matricula.trim() && it.pass == password }
+            isLoading = false
+
+            if (match != null) {
+                onLoginSuccess(match.rol)
+            } else {
+                errorMsg = "Matricula o contrasena incorrectos."
+            }
+        }
     }
 
     Scaffold(
@@ -84,15 +99,15 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.School, null, Modifier.size(40.dp),
-                             tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
                 Spacer(Modifier.height(16.dp))
                 Text("EduTask", style = MaterialTheme.typography.displayMedium,
-                     color = MaterialTheme.colorScheme.primary)
+                    color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(4.dp))
                 Text("Plataforma Academica", style = MaterialTheme.typography.bodyLarge,
-                     color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(40.dp))
 
                 ElevatedCard(
@@ -101,16 +116,16 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
                     colors    = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(24.dp),
-                           verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text("Iniciar Sesion", style = MaterialTheme.typography.headlineSmall,
-                             color = MaterialTheme.colorScheme.onSurface)
+                            color = MaterialTheme.colorScheme.onSurface)
 
                         OutlinedTextField(
                             value = matricula, onValueChange = { matricula = it; errorMsg = null },
                             modifier = Modifier.fillMaxWidth(), label = { Text("Matricula") },
                             placeholder = { Text("Ej. A12345") },
                             leadingIcon = { Icon(Icons.Default.Badge, contentDescription = "Matricula") },
-                            isError = errorMsg != null, singleLine = true,
+                            isError = errorMsg != null, singleLine = true, enabled = !isLoading,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                             keyboardActions = KeyboardActions(onNext = { focusMgr.moveFocus(FocusDirection.Down) }),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -125,10 +140,11 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
                             value = password, onValueChange = { password = it; errorMsg = null },
                             modifier = Modifier.fillMaxWidth(), label = { Text("Contrasena") },
                             leadingIcon  = { Icon(Icons.Default.Lock, contentDescription = "Contrasena") },
+                            enabled = !isLoading,
                             trailingIcon = {
                                 IconButton(onClick = { passVisible = !passVisible }) {
                                     Icon(if (passVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                         contentDescription = if (passVisible) "Ocultar" else "Mostrar")
+                                        contentDescription = if (passVisible) "Ocultar" else "Mostrar")
                                 }
                             },
                             visualTransformation = if (passVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -147,9 +163,9 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
                             Row(verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Default.ErrorOutline, "Error", Modifier.size(16.dp),
-                                     tint = MaterialTheme.colorScheme.error)
+                                    tint = MaterialTheme.colorScheme.error)
                                 Text(errorMsg ?: "", color = MaterialTheme.colorScheme.error,
-                                     style = MaterialTheme.typography.bodySmall)
+                                    style = MaterialTheme.typography.bodySmall)
                             }
                         }
 
@@ -173,15 +189,15 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             TextButton(onClick = {}) {
                                 Text("Olvidaste tu contrasena?", style = MaterialTheme.typography.bodyMedium,
-                                     color = MaterialTheme.colorScheme.primary)
+                                    color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
                 }
                 Spacer(Modifier.height(24.dp))
                 Text("El rol se asigna automaticamente segun tus credenciales institucionales.",
-                     style = MaterialTheme.typography.bodySmall,
-                     color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             }
         }
     }
