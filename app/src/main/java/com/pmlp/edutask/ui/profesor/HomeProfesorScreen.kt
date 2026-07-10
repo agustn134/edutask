@@ -25,14 +25,14 @@ import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.EvidenciaTarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.text.SimpleDateFormat
 
 private val EVIDENCIAS = listOf(
-    EvidenciaTarea(1, "Evidencia Act. 3 PMLP", "", LocalDateTime.now().minusHours(2),  EstadoEvidencia.Pendiente, 1, "Juan Ramirez"),
-    EvidenciaTarea(2, "Diagrama ER BD",         "", LocalDateTime.now().minusHours(5),  EstadoEvidencia.Pendiente, 2, "Maria Lopez"),
-    EvidenciaTarea(3, "Casos de Uso IS",        "", LocalDateTime.now().minusHours(10), EstadoEvidencia.Pendiente, 3, "Carlos Torres"),
-    EvidenciaTarea(4, "App mockup PMLP",        "", LocalDateTime.now().minusDays(1),   EstadoEvidencia.Aprobada,  4, "Ana Garcia")
+    EvidenciaTarea("1", "Evidencia Act. 3 PMLP", "", Date(System.currentTimeMillis() - 2 * 3600000),  EstadoEvidencia.Pendiente, "1", "Juan Ramirez"),
+    EvidenciaTarea("2", "Diagrama ER BD",         "", Date(System.currentTimeMillis() - 5 * 3600000),  EstadoEvidencia.Pendiente, "2", "Maria Lopez"),
+    EvidenciaTarea("3", "Casos de Uso IS",        "", Date(System.currentTimeMillis() - 10 * 3600000), EstadoEvidencia.Pendiente, "3", "Carlos Torres"),
+    EvidenciaTarea("4", "App mockup PMLP",        "", Date(System.currentTimeMillis() - 24 * 3600000), EstadoEvidencia.Aprobada,  "4", "Ana Garcia")
 )
 
 private data class AccesoRapido(val label: String, val icon: ImageVector)
@@ -54,6 +54,7 @@ private val PROF_NAV = listOf(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun HomeProfesorScreen(
+    idUsuario: String        = "",
     nombreProfesor: String   = "Mtro. Perez",
     claseActual: String      = "Programacion Movil PMLP",
     onCrearTarea: () -> Unit = {},
@@ -266,19 +267,23 @@ private fun PerfilContent(nombre: String) {
 
 @Composable
 fun EvidenciaListItem(evidencia: EvidenciaTarea) {
-    val fmt = DateTimeFormatter.ofPattern("dd/MM HH:mm")
+    val fmt = SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault())
     val isPend = evidencia.estado == EstadoEvidencia.Pendiente
     OutlinedCard(modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
         ListItem(
-            headlineContent   = { Text(evidencia.nombreAlumno, style = MaterialTheme.typography.titleSmall) },
-            supportingContent = { Text(evidencia.tituloTarea, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            leadingContent    = {
+            headlineContent = { Text(evidencia.tituloTarea, style = MaterialTheme.typography.titleSmall) },
+            supportingContent = {
+                Column {
+                    Text(evidencia.nombreAlumno, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Enviado: ${fmt.format(evidencia.fechaEnvio)}", style = MaterialTheme.typography.labelSmall)
+                }
+            },
+            leadingContent = {
                 Surface(Modifier.size(12.dp), shape = MaterialTheme.shapes.extraLarge,
                     color = if (isPend) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) {}
             },
             trailingContent = {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(evidencia.fechaEnvio.format(fmt), style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.height(4.dp))
                     OutlinedButton(onClick = {}, modifier = Modifier.height(28.dp)) {
                         Text("Ver", style = MaterialTheme.typography.labelSmall)

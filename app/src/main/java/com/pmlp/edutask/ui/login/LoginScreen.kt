@@ -37,7 +37,7 @@ import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
+fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _ -> }) {
     val context   = LocalContext.current
     val winSize   = calculateWindowSizeClass(activity = context as Activity)
     val isCompact = winSize.widthSizeClass == WindowWidthSizeClass.Compact
