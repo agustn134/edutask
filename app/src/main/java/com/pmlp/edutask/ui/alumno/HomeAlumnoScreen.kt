@@ -273,7 +273,7 @@ fun TareaCard(tarea: Tarea, estado: EstadoEvidencia) {
                                    leadingIcon = { Icon(Icons.Default.School, null, Modifier.size(AssistChipDefaults.IconSize)) },
                                    border = AssistChipDefaults.assistChipBorder(enabled = true))
                         Icon(Icons.Default.Schedule, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(tarea.fechaLimite.format(fmt), style = MaterialTheme.typography.labelSmall,
+                        Text(fmt.format(tarea.fechaLimite), style = MaterialTheme.typography.labelSmall,
                              color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

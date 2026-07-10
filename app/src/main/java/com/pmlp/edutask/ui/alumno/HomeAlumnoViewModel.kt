@@ -55,16 +55,16 @@ class HomeAlumnoViewModel : ViewModel() {
                 val clasesCache = mutableMapOf<String, String>()
                 val tareasCache = mutableMapOf<String, Tarea>()
 
-                for (asignacionDoc in asignacionesSnapshot.documents) {
+                asignacionesSnapshot.documents.forEach { asignacionDoc ->
                     val idAsignacion = asignacionDoc.id
-                    val idTarea = asignacionDoc.getString("idTarea") ?: continue
+                    val idTarea = asignacionDoc.getString("idTarea") ?: return@forEach
 
                     // 2. Fetch Tarea
                     val tarea = if (tareasCache.containsKey(idTarea)) {
                         tareasCache[idTarea]!!
                     } else {
                         val tareaDoc = db.collection("tareas").document(idTarea).get().await()
-                        if (!tareaDoc.exists()) continue
+                        if (!tareaDoc.exists()) return@forEach
                         
                         val idClase = tareaDoc.getString("idClase") ?: ""
                         val titulo = tareaDoc.getString("titulo") ?: ""
