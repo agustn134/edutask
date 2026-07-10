@@ -1,0 +1,170 @@
+{
+  "usuarios": {
+    "alumno_001": {
+      "nombre": "Alumno de prueba",
+      "matricula": "A12345",
+      "correo": "alumno.prueba@edutask.mx",
+      "rol": "Alumno",
+      "contrasena": "alumno123"
+    },
+    "coordinador_001": {
+      "nombre": "Coordinador de prueba",
+      "matricula": "C00001",
+      "correo": "coordinador.prueba@edutask.mx",
+      "rol": "Coordinador",
+      "contrasena": "coord123"
+    },
+    "profesor_001": {
+      "nombre": "Profesor de prueba",
+      "matricula": "P98765",
+      "correo": "profesor.prueba@edutask.mx",
+      "rol": "Profesor",
+      "contrasena": "profesor123"
+    }
+  },
+  "clases": {
+    "ZJB97S": {
+      "idUsuario": "profesor 001",
+      "nombre": "ufuuffufuffufufjfufnfk",
+      "enlace": "ggggffff",
+      "descripcion": "gggggf"
+    },
+    "clase_001": {
+      "idUsuario": "profesor_001",
+      "nombre": "Matemáticas III",
+      "enlace": "https://meet.edutask.mx/mate3",
+      "descripcion": "Álgebra y geometría analítica"
+    },
+    "clase_002": {
+      "idUsuario": "profesor_001",
+      "nombre": "Programación Básica",
+      "enlace": "https://meet.edutask.mx/prog1",
+      "descripcion": "Introducción a la lógica de programación"
+    }
+  },
+  "clase_alumno": {
+    "insc_001": {
+      "idUsuario": "alumno_001",
+      "idClase": "clase_001"
+    },
+    "insc_002": {
+      "idUsuario": "alumno_001",
+      "idClase": "clase_002"
+    }
+  },
+  "tareas": {
+    "VhYmV1x4ezMsrgMjzM0L": {
+      "nombreClase": "ufuuffufuffufufjfufnfk",
+      "fechaLimite": "2026-08-20T05:00:00+00:00",
+      "titulo": "rrrfff",
+      "descripcion": "ffffffff",
+      "idClase": "ZJB97S"
+    },
+    "fQOE5TMXwA2VnacOVepL": {
+      "nombreClase": "Matemáticas III",
+      "fechaLimite": "2026-07-10T05:00:00+00:00",
+      "titulo": "para simule",
+      "descripcion": "jdjdjdjd",
+      "idClase": "clase_001"
+    },
+    "tarea_001": {
+      "fechaLimite": "2026-07-15T03:52:22.248609+00:00",
+      "titulo": "Ejercicios de factorización",
+      "descripcion": "Resolver los ejercicios 1 al 20 de la página 45",
+      "idClase": "clase_001"
+    },
+    "tarea_002": {
+      "fechaLimite": "2026-07-20T03:52:22.248624+00:00",
+      "titulo": "Proyecto de geometría analítica",
+      "descripcion": "Entregar el análisis de las cónicas asignadas",
+      "idClase": "clase_001"
+    }
+  },
+  "asignaciones_tarea": {
+    "asig_001": {
+      "idUsuario": "alumno_001",
+      "idTarea": "tarea_001",
+      "fechaAsignacion": "2026-07-10T03:52:22.876128+00:00"
+    },
+    "asig_002": {
+      "idUsuario": "alumno_001",
+      "idTarea": "tarea_002",
+      "fechaAsignacion": "2026-07-10T03:52:22.876135+00:00"
+    }
+  },
+  "evidencias_tarea": {
+    "evid_001": {
+      "fechaEnvio": "2026-07-10T03:52:23.538863+00:00",
+      "idAsignacion": "asig_001",
+      "fotoUrl": "https://storage.edutask.mx/evidencias/evid_001.jpg",
+      "estado": "Pendiente",
+      "tituloTarea": "Evidencia de entrega"
+    },
+    "evid_002": {
+      "fechaEnvio": "2026-07-10T03:52:23.538877+00:00",
+      "idAsignacion": "asig_002",
+      "fotoUrl": "https://storage.edutask.mx/evidencias/evid_002.jpg",
+      "estado": "Aprobada",
+      "tituloTarea": "Evidencia de entrega"
+    },
+    "evid_sim_1d009277": {
+      "fechaEnvio": "2026-07-10T04:15:29.383683+00:00",
+      "idAsignacion": "asig_001",
+      "fotoUrl": "data:image/png;base64,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V1w1YfDEI/aa9/qWex5p/h0fgL9dmVGXzfzQO8+5dmzj69Hfe+4juiQA+OQy5H+WASA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEIDQhBCA0IQQgNCEEILSij+pAc64d+1EdCgA+MVaEAIQmhACEJoQAhJYZddnM3X0NALDbWBECEJoQAhCaEAIQmhACEJoQAhCaEAIQmhACEJoQAhCaEAIQmhACEJoQAhCaEAIQmhACEJoQAhCaEAIQmhACEJoQAhCaEAKQIvv/1aDc17ZCDKcAAAAASUVORK5CYII=",
+      "estado": "Pendiente",
+      "tituloTarea": "Evidencia simulada"
+    }
+  },
+  "notificaciones_reloj": {
+    "notif_001": {
+      "idEvidencia": "evid_001",
+      "mensajeAlerta": "Nueva evidencia enviada, revisa tu smartwatch",
+      "fueLeida": false,
+      "fechaHoraRecepcion": "2026-07-10T03:52:24.224651+00:00"
+    },
+    "notif_002": {
+      "idEvidencia": "evid_002",
+      "mensajeAlerta": "Nueva evidencia enviada, revisa tu smartwatch",
+      "fueLeida": false,
+      "fechaHoraRecepcion": "2026-07-10T03:52:24.224662+00:00"
+    },
+    "notif_sim_89f887f8": {
+      "idEvidencia": "evid_sim_1d009277",
+      "mensajeAlerta": "Nueva evidencia enviada, revisa tu smartwatch",
+      "fueLeida": false,
+      "fechaHoraRecepcion": "2026-07-10T04:15:29.502032+00:00"
+    }
+  },
+  "calificaciones": {
+    "calif_001": {
+      "valor": 8,
+      "idUsuario": "profesor_001",
+      "idEvidencia": "evid_001",
+      "fechaCalificacion": "2026-07-10T03:52:24.854577+00:00",
+      "comentario": "Buen trabajo, revisa la ortografía."
+    },
+    "calif_002": {
+      "valor": 9,
+      "idUsuario": "profesor_001",
+      "idEvidencia": "evid_002",
+      "fechaCalificacion": "2026-07-10T03:52:24.854583+00:00",
+      "comentario": "Buen trabajo, revisa la ortografía."
+    }
+  },
+  "eventos_escolares": {
+    "evento_001": {
+      "lugar": "Auditorio principal",
+      "idUsuario": "coordinador_001",
+      "titulo": "Junta de padres de familia",
+      "descripcion": "Entrega de boletas del primer parcial",
+      "fechaEvento": "2026-07-25T03:52:25.503890+00:00"
+    },
+    "evento_002": {
+      "lugar": "Patio central",
+      "idUsuario": "coordinador_001",
+      "titulo": "Semana cultural",
+      "descripcion": "Actividades artísticas y deportivas",
+      "fechaEvento": "2026-08-09T03:52:25.503896+00:00"
+    }
+  }
+}
