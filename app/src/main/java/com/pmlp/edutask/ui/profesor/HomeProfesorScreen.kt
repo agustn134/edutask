@@ -592,18 +592,6 @@ private fun InicioContent(
         } else {
             items(filteredEvidencias) { ev -> EvidenciaListItem(ev, onVerClick) }
         }
-
-        item { Spacer(Modifier.height(16.dp)) }
-        item { Text("Acceso Rápido", style = MaterialTheme.typography.titleLarge) }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ACCESOS.chunked(2).forEach { fila ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        fila.forEach { acceso -> AccesoRapidoCard(acceso, Modifier.weight(1f)) }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -807,303 +795,142 @@ private fun PerfilContent(
     evaluacionesCount: Int,
     onLogout: () -> Unit
 ) {
-    var darkMode by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var autoSyncEnabled by remember { mutableStateOf(true) }
-
-    val initials = remember(nombre) {
-        nombre.split(" ")
-            .filter { it.length > 2 }
-            .take(2)
-            .joinToString("") { it.first().toString().uppercase() }
-            .ifBlank { "P" }
-    }
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(24.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Avatar & Identification Header
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(100.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = androidx.compose.foundation.shape.CircleShape
-                )
+        // Profile Header
+        Surface(
+            Modifier.size(100.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.primaryContainer
         ) {
-            Text(
-                text = initials,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    nombre.split(" ").take(2).joinToString("") { it.first().toString().uppercase() },
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(nombre, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Departamento Académico", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Rol: Profesor", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        
+        Spacer(Modifier.height(32.dp))
+        
+        // Statistics Section
+        Text(
+            text = "Mis Estadísticas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(16.dp))
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            StatCard(
+                title = "Asignaturas",
+                value = clasesCount.toString(),
+                icon = Icons.Default.School,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Tareas",
+                value = tareasCount.toString(),
+                icon = Icons.Default.Assignment,
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.weight(1f)
             )
         }
+        
+        Spacer(Modifier.height(16.dp))
+        
+        StatCard(
+            title = "Evidencias Evaluadas",
+            value = evaluacionesCount.toString(),
+            icon = Icons.Default.Grade,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.fillMaxWidth()
+        )
 
+        Spacer(Modifier.height(32.dp))
+
+        // Shortcuts / Contact Info
         Text(
-            text = nombre,
+            text = "Información y Atajos",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth()
         )
-
-        Text(
-            text = "Docente Académico • EduTask",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary
+        Spacer(Modifier.height(16.dp))
+        
+        ShortcutItem(icon = Icons.Default.Email, title = "Contacto Administrativo", subtitle = "soporte.docentes@edutask.edu")
+        Spacer(Modifier.height(12.dp))
+        ShortcutItem(icon = Icons.Default.Settings, title = "Ajustes de Cuenta", subtitle = "Cambiar contraseña y preferencias")
+        Spacer(Modifier.height(12.dp))
+        ShortcutItem(icon = Icons.Default.HelpOutline, title = "Soporte Técnico", subtitle = "Reportar un problema con la app")
+        Spacer(Modifier.height(12.dp))
+        ShortcutItem(
+            icon = Icons.Default.Logout,
+            title = "Cerrar Sesión",
+            subtitle = "Salir de la cuenta de forma segura",
+            onClick = onLogout
         )
+    }
+}
 
-        Spacer(modifier = Modifier.height(8.dp))
+@Composable
+private fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = color,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+            Spacer(Modifier.height(12.dp))
+            Text(text = title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
-        // Quick Stats row
+@Composable
+private fun ShortcutItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit = {}) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        onClick = onClick
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Clases count
-            ElevatedCard(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = clasesCount.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Asignaturas",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp))
             }
-
-            // Tareas count
-            ElevatedCard(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = tareasCount.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = "Tareas",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Evaluaciones count
-            ElevatedCard(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = evaluacionesCount.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                    Text(
-                        text = "Evaluadas",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Professional Info Card
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Información Profesional",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.School,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Institución",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Colegio de Bachilleres EduTask",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Badge,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "ID Empleado",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "EMP-9823",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Correo Institucional",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "docente.edutask@colegio.edu.mx",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        }
-
-        // App Preferences Switches Card
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Configuración",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(bottom = 4.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Notificaciones de entrega", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Switch(
-                        checked = notificationsEnabled,
-                        onCheckedChange = { notificationsEnabled = it }
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Sync, null, tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Sincronización en la nube", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Switch(
-                        checked = autoSyncEnabled,
-                        onCheckedChange = { autoSyncEnabled = it }
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DarkMode, null, tint = MaterialTheme.colorScheme.secondary)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Tema oscuro (Vista previa)", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Switch(
-                        checked = darkMode,
-                        onCheckedChange = { darkMode = it }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Logout Button
-        Button(
-            onClick = onLogout,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(Icons.Default.Logout, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Cerrar Sesión", fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
