@@ -152,8 +152,8 @@ fun HomeAlumnoScreen(
                         }
                         1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
                                       tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                        2 -> CalificacionesContent(Modifier.padding(pad), data.tareas)
-                        3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera)
+                        2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                        3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
                     }
                 }
             }
@@ -223,8 +223,8 @@ fun HomeAlumnoScreen(
                             }
                             1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
                                           tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas)
-                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera)
+                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
                         }
                     }
                 }

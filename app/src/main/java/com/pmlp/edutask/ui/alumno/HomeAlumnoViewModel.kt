@@ -16,7 +16,9 @@ import java.util.Date
 data class TareaItem(
     val tarea: Tarea,
     val estado: EstadoEvidencia,
-    val idAsignacion: String
+    val idAsignacion: String,
+    val calificacion: Int? = null,
+    val comentario: String? = null
 )
 
 sealed class HomeAlumnoState {
@@ -149,25 +151,50 @@ class HomeAlumnoViewModel : ViewModel() {
                             val evListener = db.collection("evidencias_tarea")
                                 .whereEqualTo("idAsignacion", idAsignacion)
                                 .addSnapshotListener { evSnapshot, _ ->
-                                    var estadoEvidencia = EstadoEvidencia.Pendiente
                                     if (evSnapshot != null && !evSnapshot.isEmpty) {
                                         val evidenciaDoc = evSnapshot.documents[0]
                                         val estadoStr = evidenciaDoc.getString("estado")
-                                        estadoEvidencia = when (estadoStr) {
+                                        val idEvidencia = evidenciaDoc.id
+                                        
+                                        val estadoEvidencia = when (estadoStr) {
                                             "Aprobada" -> EstadoEvidencia.Aprobada
                                             "Rechazada" -> EstadoEvidencia.Rechazada
                                             else -> EstadoEvidencia.Pendiente
                                         }
+
+                                        // Si está evaluada, buscamos la calificación
+                                        if (estadoEvidencia != EstadoEvidencia.Pendiente) {
+                                            db.collection("calificaciones")
+                                                .whereEqualTo("idEvidencia", idEvidencia)
+                                                .get()
+                                                .addOnSuccessListener { califSnapshot ->
+                                                    var calificacion: Int? = null
+                                                    var comentario: String? = null
+                                                    if (!califSnapshot.isEmpty) {
+                                                        calificacion = califSnapshot.documents[0].getLong("valor")?.toInt()
+                                                        comentario = califSnapshot.documents[0].getString("comentario")
+                                                    }
+                                                    
+                                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario)
+                                                    _uiState.value = HomeAlumnoState.Success(
+                                                        clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
+                                                        tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                                                    )
+                                                }
+                                        } else {
+                                            paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, null)
+                                            _uiState.value = HomeAlumnoState.Success(
+                                                clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
+                                                tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                                            )
+                                        }
+                                    } else {
+                                        paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion, null)
+                                        _uiState.value = HomeAlumnoState.Success(
+                                            clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
+                                            tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                                        )
                                     }
-
-                                    // Actualizar estado en el mapa reactivamente
-                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion)
-
-                                    // Emitir actualización de estado a la UI
-                                    _uiState.value = HomeAlumnoState.Success(
-                                        clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                        tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
-                                    )
                                 }
                             evidenciasListeners.add(evListener)
                         }
