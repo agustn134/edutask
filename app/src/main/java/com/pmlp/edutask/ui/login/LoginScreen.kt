@@ -31,15 +31,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.RolUsuario
 import com.pmlp.edutask.ui.theme.EduTaskTheme
-import kotlinx.coroutines.delay
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
-
-private data class CredencialStub(val matricula: String, val pass: String, val rol: RolUsuario)
-private val CREDENCIALES = listOf(
-    CredencialStub("a", "linux",   RolUsuario.Alumno),
-    CredencialStub("p", "linux", RolUsuario.Profesor),
-    CredencialStub("c", "linux",    RolUsuario.Coordinador)
-)
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -56,6 +50,7 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
     val focusMgr        = LocalFocusManager.current
     val scroll          = rememberScrollState()
     val scope           = rememberCoroutineScope()
+    val db              = remember { FirebaseFirestore.getInstance() }
 
     fun doLogin() {
         if (matricula.isBlank() || password.isBlank()) return
@@ -63,16 +58,43 @@ fun LoginScreen(onLoginSuccess: (RolUsuario) -> Unit = {}) {
         scope.launch {
             isLoading = true
             errorMsg = null
-            // Simulamos un pequeño retraso de consulta a la base de datos (1.5 segundos)
-            delay(1500)
 
-            val match = CREDENCIALES.find { it.matricula == matricula.trim() && it.pass == password }
-            isLoading = false
+            try {
+                // Buscar usuario por matricula en Firestore
+                val snapshot = db.collection("usuarios")
+                    .whereEqualTo("matricula", matricula.trim())
+                    .get()
+                    .await()
 
-            if (match != null) {
-                onLoginSuccess(match.rol)
-            } else {
-                errorMsg = "Matricula o contrasena incorrectos."
+                if (snapshot.isEmpty) {
+                    errorMsg = "No se encontro un usuario con esa matricula."
+                    isLoading = false
+                    return@launch
+                }
+
+                val doc = snapshot.documents[0]
+                val contrasenaFirestore = doc.getString("contrasena") ?: ""
+
+                if (password != contrasenaFirestore) {
+                    errorMsg = "Contrasena incorrecta."
+                    isLoading = false
+                    return@launch
+                }
+
+                // Mapear el rol del documento al enum
+                val rolString = doc.getString("rol") ?: "Alumno"
+                val rol = when (rolString) {
+                    "Profesor"     -> RolUsuario.Profesor
+                    "Coordinador"  -> RolUsuario.Coordinador
+                    else           -> RolUsuario.Alumno
+                }
+
+                isLoading = false
+                onLoginSuccess(rol)
+
+            } catch (e: Exception) {
+                isLoading = false
+                errorMsg = "Error de conexion. Verifica tu internet."
             }
         }
     }
