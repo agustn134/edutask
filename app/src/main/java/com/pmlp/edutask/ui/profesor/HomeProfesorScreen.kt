@@ -22,6 +22,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.EvidenciaTarea
 import com.pmlp.edutask.model.Tarea
@@ -66,7 +68,10 @@ fun HomeProfesorScreen(
     nombreProfesor: String   = "Mtro. Perez",
     claseActual: String      = "Programacion Movil PMLP",
     eventosViewModel: EventosSharedViewModel = viewModel(),
-    onCrearTarea: () -> Unit = {},
+    onCrearTarea: (String, String?) -> Unit = { _, _ -> },
+    onVerEvidencia: (String) -> Unit = {},
+    onVerAlumnos: (String, String) -> Unit = { _, _ -> },
+    onVerEstadisticas: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit     = {}
 ) {
     val winSize   = calculateWindowSizeClass(activity = androidx.compose.ui.platform.LocalContext.current as Activity)
@@ -187,7 +192,7 @@ fun HomeProfesorScreen(
                     EvidenciaTarea(
                         idEvidencia = idEvidenciaStr,
                         tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
-                        fotoUrl = doc.getString("fotoUrl") ?: "",
+                        fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
                         fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
                         estado = estadoEnum,
                         idAsignacion = idAsignacionStr,
@@ -363,9 +368,39 @@ fun HomeProfesorScreen(
             } else emptyList()
 
             when (selectedNav) {
-                0 -> InicioContent(pendientes, claseActual, eventos, onCrearTarea)
-                1 -> TareasContent(claseActual)
-                2 -> ClasesContent()
+                0 -> InicioContent(
+                    pendientes = pendientes,
+                    claseActual = claseActual,
+                    eventos = eventos,
+                    evidencias = listaEvidencias,
+                    onCrearTarea = { onCrearTarea(idUsuario, null) },
+                    onVerClick = { onVerEvidencia(it.idEvidencia) }
+                )
+                1 -> TareasContent(
+                    tareas = listaTareas,
+                    clases = listaClases,
+                    idUsuario = idUsuario,
+                    onEditTarea = onCrearTarea,
+                    onDeleteTarea = { idTarea ->
+                        db.collection("tareas").document(idTarea).delete()
+                    },
+                    onVerEstadisticas = onVerEstadisticas
+                )
+                2 -> ClasesContent(
+                    clases = listaClases,
+                    inscripciones = inscripcionesMap,
+                    onEditClase = { clase ->
+                        nuevaClaseNombre = clase.nombre
+                        nuevaClaseDesc = clase.descripcion
+                        nuevaClaseEnlace = clase.enlace
+                        editingClaseId = clase.idClase
+                        showClassDialog = true
+                    },
+                    onDeleteClase = { idClase ->
+                        db.collection("clases").document(idClase).delete()
+                    },
+                    onVerAlumnos = onVerAlumnos
+                )
                 3 -> PerfilContent(nombreProfesor)
             }
         }
@@ -373,7 +408,24 @@ fun HomeProfesorScreen(
 }
 
 @Composable
-private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Evento>, onCrearTarea: () -> Unit) {
+private fun InicioContent(
+    pendientes: Int,
+    claseActual: String,
+    eventos: List<Evento>,
+    evidencias: List<EvidenciaTarea>,
+    onCrearTarea: () -> Unit,
+    onVerClick: (EvidenciaTarea) -> Unit
+) {
+    var selectedStatusFilter by remember { mutableStateOf<EstadoEvidencia?>(null) }
+
+    val filteredEvidencias = remember(evidencias, selectedStatusFilter) {
+        if (selectedStatusFilter == null) {
+            evidencias
+        } else {
+            evidencias.filter { it.estado == selectedStatusFilter }
+        }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -416,12 +468,85 @@ private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Ev
             }
         }
 
-        if (evidencias.isEmpty()) {
+        // Status Filter Chips LazyRow
+        item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 4.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == null,
+                        onClick = { selectedStatusFilter = null },
+                        label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == null) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == EstadoEvidencia.Pendiente,
+                        onClick = { selectedStatusFilter = EstadoEvidencia.Pendiente },
+                        label = { Text("Pendientes", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == EstadoEvidencia.Pendiente) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == EstadoEvidencia.Aprobada,
+                        onClick = { selectedStatusFilter = EstadoEvidencia.Aprobada },
+                        label = { Text("Aprobadas", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == EstadoEvidencia.Aprobada) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == EstadoEvidencia.Rechazada,
+                        onClick = { selectedStatusFilter = EstadoEvidencia.Rechazada },
+                        label = { Text("Rechazadas", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == EstadoEvidencia.Rechazada) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        if (filteredEvidencias.isEmpty()) {
             item {
-                Text("No hay entregas registradas en la base de datos.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+                Text("No hay entregas registradas con este estado.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
             }
         } else {
-            items(evidencias) { ev -> EvidenciaListItem(ev, onVerClick) }
+            items(filteredEvidencias) { ev -> EvidenciaListItem(ev, onVerClick) }
         }
 
         item { Spacer(Modifier.height(16.dp)) }
@@ -448,7 +573,6 @@ private fun TareasContent(
     onVerEstadisticas: (String, String) -> Unit
 ) {
     var selectedClaseFilterId by remember { mutableStateOf<String?>(null) }
-    var filterExpanded by remember { mutableStateOf(false) }
 
     val filteredTareas = remember(tareas, selectedClaseFilterId) {
         if (selectedClaseFilterId == null) {
@@ -458,72 +582,53 @@ private fun TareasContent(
         }
     }
 
-    val selectedFilterLabel = remember(selectedClaseFilterId, clases) {
-        if (selectedClaseFilterId == null) {
-            "Todas las clases"
-        } else {
-            clases.find { it.idClase == selectedClaseFilterId }?.nombre ?: "Todas las clases"
-        }
-    }
-
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Panel de Actividades", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
         item { Text("Lista de tareas vigentes asignadas a tus clases.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         
-        // Filter UI
+        // Sección de Filtros de Clase
         item {
-            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                OutlinedCard(
-                    onClick = { filterExpanded = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.FilterList, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text("Filtrar por Clase", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(end = 8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Filtrar: $selectedFilterLabel",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    // Chip para "Todas"
+                    item {
+                        FilterChip(
+                            selected = selectedClaseFilterId == null,
+                            onClick = { selectedClaseFilterId = null },
+                            label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                if (selectedClaseFilterId == null) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            }
                         )
                     }
-                }
-
-                DropdownMenu(
-                    expanded = filterExpanded,
-                    onDismissRequest = { filterExpanded = false },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Todas las clases") },
-                        onClick = {
-                            selectedClaseFilterId = null
-                            filterExpanded = false
-                        },
-                        leadingIcon = { Icon(Icons.Default.Class, null) }
-                    )
-                    clases.forEach { clase ->
-                        DropdownMenuItem(
-                            text = { Text(clase.nombre) },
-                            onClick = {
-                                selectedClaseFilterId = clase.idClase
-                                filterExpanded = false
-                            },
-                            leadingIcon = { Icon(Icons.Default.School, null) }
+                    // Chips de cada clase
+                    items(clases) { clase ->
+                        FilterChip(
+                            selected = selectedClaseFilterId == clase.idClase,
+                            onClick = { selectedClaseFilterId = clase.idClase },
+                            label = { Text(clase.nombre, style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                if (selectedClaseFilterId == clase.idClase) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            }
                         )
                     }
                 }
@@ -703,11 +808,11 @@ private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier
     }
 }
 
-<<<<<<< HEAD
 private fun generateShortCode(): String {
     val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return (1..6).map { chars.random() }.joinToString("")
-=======
+}
+
 @Composable
 fun EventoCarouselCardProfesor(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
@@ -724,5 +829,4 @@ fun EventoCarouselCardProfesor(evento: Evento) {
             Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
->>>>>>> 599a1a98ec2c63adf69c105ec87a6c7a550aa56c
 }

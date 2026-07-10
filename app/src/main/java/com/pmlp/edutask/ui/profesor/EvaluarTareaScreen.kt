@@ -25,6 +25,11 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.asImageBitmap
+import android.util.Base64
+import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +82,7 @@ fun EvaluarTareaScreen(
                         evidencia = EvidenciaTarea(
                             idEvidencia = idEvidenciaStr,
                             tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
-                            fotoUrl = doc.getString("fotoUrl") ?: "",
+                            fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
                             fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
                             estado = estadoEnum,
                             idAsignacion = idAsignacionStr,
@@ -204,20 +209,39 @@ fun EvaluarTareaScreen(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             
-                            if (ev.fotoUrl.isNotBlank()) {
+                            val bitmap = remember(ev.fotoBase64) {
+                                if (ev.fotoBase64.isNotBlank()) {
+                                    decodeBase64ToBitmap(ev.fotoBase64)
+                                } else {
+                                    null
+                                }
+                            }
+
+                            if (bitmap != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedCard(
+                                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                ) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = "Evidencia adjunta",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                                    )
+                                }
+                            } else if (ev.fotoBase64.isNotBlank()) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Icon(Icons.Default.Image, null, tint = MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Default.BrokenImage, null, tint = MaterialTheme.colorScheme.error)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = ev.fotoUrl,
+                                        text = "Error al decodificar la evidencia.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f)
+                                        color = MaterialTheme.colorScheme.error
                                     )
                                 }
                             } else {
@@ -418,5 +442,19 @@ fun EvaluarTareaScreen(
                 }
             }
         }
+    }
+}
+
+private fun decodeBase64ToBitmap(base64Str: String): android.graphics.Bitmap? {
+    return try {
+        val cleanString = if (base64Str.contains(",")) {
+            base64Str.substring(base64Str.indexOf(",") + 1)
+        } else {
+            base64Str
+        }
+        val decodedBytes = android.util.Base64.decode(cleanString, android.util.Base64.DEFAULT)
+        android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+    } catch (e: Exception) {
+        null
     }
 }
