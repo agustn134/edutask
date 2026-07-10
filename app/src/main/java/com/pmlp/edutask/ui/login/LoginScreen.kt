@@ -36,9 +36,9 @@ import kotlinx.coroutines.launch
 
 private data class CredencialStub(val matricula: String, val pass: String, val rol: RolUsuario)
 private val CREDENCIALES = listOf(
-    CredencialStub("A12345", "alumno123",   RolUsuario.Alumno),
-    CredencialStub("P98765", "profesor123", RolUsuario.Profesor),
-    CredencialStub("C00001", "coord123",    RolUsuario.Coordinador)
+    CredencialStub("a", "linux",   RolUsuario.Alumno),
+    CredencialStub("p", "linux", RolUsuario.Profesor),
+    CredencialStub("c", "linux",    RolUsuario.Coordinador)
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
