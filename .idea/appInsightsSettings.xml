@@ -6,14 +6,6 @@
         <entry key="Firebase Crashlytics">
           <value>
             <InsightsFilterSettings>
-              <option name="connection">
-                <ConnectionSetting>
-                  <option name="appId" value="com.pmlp.edutask" />
-                  <option name="mobileSdkAppId" value="1:887804414784:android:434c628fb622b957ee08a5" />
-                  <option name="projectId" value="edutask-cmpm-alp" />
-                  <option name="projectNumber" value="887804414784" />
-                </ConnectionSetting>
-              </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
               <option name="timeIntervalDays" value="THIRTY_DAYS" />
               <option name="visibilityType" value="ALL" />

@@ -5,7 +5,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -66,6 +68,21 @@ fun EnviarEvidenciaScreen(
 
     // URI temporal para escribir la foto de la cámara
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
+    
+    // ── Launcher para la galería (con fallback para compatibilidad) ─────────────
+    // PickVisualMedia es el selector moderno (Android 11+). En dispositivos que
+    // no lo soporten (algunos ROMs como ColorOS), usamos GetContent como respaldo.
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { fotoBitmap = decodeUriToSafeBitmap(context, it) }
+    }
+
+    val getContentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { fotoBitmap = decodeUriToSafeBitmap(context, it) }
+    }
 
     // ── Dialogo de éxito ─────────────────────────────────────────────────────
     var showSuccessDialog by remember { mutableStateOf(false) }
@@ -108,14 +125,6 @@ fun EnviarEvidenciaScreen(
         }
     }
 
-    // ── Launcher para seleccionar imagen de la galería ───────────────────────
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            fotoBitmap = decodeUriToSafeBitmap(context, it)
-        }
-    }
 
     // ── Launchers para Permisos Nativos ──────────────────────────────────────
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -125,6 +134,38 @@ fun EnviarEvidenciaScreen(
             val uri = crearUriParaFoto(context)
             fotoUri = uri
             cameraLauncher.launch(uri)
+        }
+    }
+
+    // En Android 12 (API 32) y anterior se requiere READ_EXTERNAL_STORAGE
+    // En Android 13+ (API 33) el Photo Picker no necesita ningún permiso
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            getContentLauncher.launch("image/*")
+        }
+    }
+
+    fun abrirGaleria() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+: PickVisualMedia no necesita permisos, lanzar directo
+            photoPickerLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } else if (ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable(context)) {
+            // Android 11-12 con Photo Picker disponible (via Play Services)
+            photoPickerLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } else {
+            // Fallback: Android 12 sin Photo Picker — necesita permiso READ_EXTERNAL_STORAGE
+            val permiso = Manifest.permission.READ_EXTERNAL_STORAGE
+            if (ContextCompat.checkSelfPermission(context, permiso) == PackageManager.PERMISSION_GRANTED) {
+                getContentLauncher.launch("image/*")
+            } else {
+                storagePermissionLauncher.launch(permiso)
+            }
         }
     }
 
@@ -205,15 +246,9 @@ fun EnviarEvidenciaScreen(
                             Text("Cámara")
                         }
 
-                        // Botón Subir Galería
+                        // Botón Subir Galería (verifica permisos según versión Android)
                         OutlinedButton(
-                            onClick = {
-                                try {
-                                    galleryLauncher.launch("image/*")
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            },
+                            onClick = { abrirGaleria() },
                             modifier = Modifier.weight(1f),
                             shape    = RoundedCornerShape(12.dp),
                             border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -476,6 +511,8 @@ fun EnviarEvidenciaScreen(
             // Espacio extra para el bottom bar
             Spacer(Modifier.height(8.dp))
         }
+
+        // El espacio extra se mantiene si es necesario
     }
 }
 
