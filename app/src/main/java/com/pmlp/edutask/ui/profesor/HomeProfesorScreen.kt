@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -164,45 +167,80 @@ fun HomeProfesorScreen(
         onDispose { listener.remove() }
     }
 
-    // Listener en tiempo real conectado a Firestore
-    DisposableEffect(Unit) {
-        val listener = db.collection("evidencias_tarea")
-            .orderBy("fechaEnvio", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+    val tareasIds = remember(listaTareas) { listaTareas.map { it.idTarea } }
+    var asignacionesIdsDelProfesor by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-                val evidenciasMapeadas = snapshot.documents.map { doc ->
-                    val estadoStr = doc.getString("estado") ?: "Pendiente"
-                    val estadoEnum = when (estadoStr.lowercase()) {
-                        "aprobada" -> EstadoEvidencia.Aprobada
-                        "rechazada" -> EstadoEvidencia.Rechazada
-                        else -> EstadoEvidencia.Pendiente
-                    }
-
-                    val idEvidenciaRaw = doc.get("idEvidencia")
-                    val idEvidenciaStr = when (idEvidenciaRaw) {
-                        is Number -> idEvidenciaRaw.toLong().toString()
-                        else -> idEvidenciaRaw?.toString() ?: doc.id
-                    }
-                    val idAsignacionRaw = doc.get("idAsignacion")
-                    val idAsignacionStr = when (idAsignacionRaw) {
-                        is Number -> idAsignacionRaw.toLong().toString()
-                        else -> idAsignacionRaw?.toString() ?: ""
-                    }
-                    EvidenciaTarea(
-                        idEvidencia = idEvidenciaStr,
-                        tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
-                        fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
-                        fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
-                        estado = estadoEnum,
-                        idAsignacion = idAsignacionStr,
-                        nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
-                    )
+    // Listener for assignments related to this professor's tasks
+    DisposableEffect(tareasIds) {
+        if (tareasIds.isEmpty()) {
+            asignacionesIdsDelProfesor = emptySet()
+            onDispose {}
+        } else {
+            val listener = db.collection("asignaciones_tarea")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    val matchingIds = snapshot.documents
+                        .filter { doc ->
+                            val idTarea = doc.getString("idTarea") ?: ""
+                            idTarea in tareasIds
+                        }
+                        .map { it.id }
+                        .toSet()
+                    asignacionesIdsDelProfesor = matchingIds
                 }
-                listaEvidencias = evidenciasMapeadas
-            }
+            onDispose { listener.remove() }
+        }
+    }
 
-        onDispose { listener.remove() } // Limpia el listener cuando sales de la pantalla
+    // Listener for evidence submissions, filtered in memory by professor assignment IDs
+    DisposableEffect(asignacionesIdsDelProfesor) {
+        if (asignacionesIdsDelProfesor.isEmpty()) {
+            listaEvidencias = emptyList()
+            onDispose {}
+        } else {
+            val listener = db.collection("evidencias_tarea")
+                .orderBy("fechaEnvio", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+
+                    val evidenciasMapeadas = snapshot.documents
+                        .filter { doc ->
+                            val idAsignacion = doc.getString("idAsignacion") ?: ""
+                            idAsignacion in asignacionesIdsDelProfesor
+                        }
+                        .map { doc ->
+                            val estadoStr = doc.getString("estado") ?: "Pendiente"
+                            val estadoEnum = when (estadoStr.lowercase()) {
+                                "aprobada" -> EstadoEvidencia.Aprobada
+                                "rechazada" -> EstadoEvidencia.Rechazada
+                                else -> EstadoEvidencia.Pendiente
+                            }
+
+                            val idEvidenciaRaw = doc.get("idEvidencia")
+                            val idEvidenciaStr = when (idEvidenciaRaw) {
+                                is Number -> idEvidenciaRaw.toLong().toString()
+                                else -> idEvidenciaRaw?.toString() ?: doc.id
+                            }
+                            val idAsignacionRaw = doc.get("idAsignacion")
+                            val idAsignacionStr = when (idAsignacionRaw) {
+                                is Number -> idAsignacionRaw.toLong().toString()
+                                else -> idAsignacionRaw?.toString() ?: ""
+                            }
+                            EvidenciaTarea(
+                                idEvidencia = idEvidenciaStr,
+                                tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
+                                fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
+                                fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
+                                estado = estadoEnum,
+                                idAsignacion = idAsignacionStr,
+                                nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
+                            )
+                        }
+                    listaEvidencias = evidenciasMapeadas
+                }
+
+            onDispose { listener.remove() }
+        }
     }
 
     val pendientes = listaEvidencias.count { it.estado == EstadoEvidencia.Pendiente }
@@ -401,7 +439,13 @@ fun HomeProfesorScreen(
                     },
                     onVerAlumnos = onVerAlumnos
                 )
-                3 -> PerfilContent(nombreProfesor)
+                3 -> PerfilContent(
+                    nombre = nombreProfesor,
+                    clasesCount = listaClases.size,
+                    tareasCount = listaTareas.size,
+                    evaluacionesCount = listaEvidencias.count { it.estado != EstadoEvidencia.Pendiente },
+                    onLogout = onLogout
+                )
             }
         }
     }
@@ -547,18 +591,6 @@ private fun InicioContent(
             }
         } else {
             items(filteredEvidencias) { ev -> EvidenciaListItem(ev, onVerClick) }
-        }
-
-        item { Spacer(Modifier.height(16.dp)) }
-        item { Text("Acceso Rápido", style = MaterialTheme.typography.titleLarge) }
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ACCESOS.chunked(2).forEach { fila ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        fila.forEach { acceso -> AccesoRapidoCard(acceso, Modifier.weight(1f)) }
-                    }
-                }
-            }
         }
     }
 }
@@ -756,10 +788,149 @@ private fun ClasesContent(
 }
 
 @Composable
-private fun PerfilContent(nombre: String) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+private fun PerfilContent(
+    nombre: String,
+    clasesCount: Int,
+    tareasCount: Int,
+    evaluacionesCount: Int,
+    onLogout: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Profile Header
+        Surface(
+            Modifier.size(100.dp),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    nombre.split(" ").take(2).joinToString("") { it.first().toString().uppercase() },
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
         Text(nombre, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Rol: Docente / Coordinador", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Departamento Académico", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Rol: Profesor", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        
+        Spacer(Modifier.height(32.dp))
+        
+        // Statistics Section
+        Text(
+            text = "Mis Estadísticas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(16.dp))
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            StatCard(
+                title = "Asignaturas",
+                value = clasesCount.toString(),
+                icon = Icons.Default.School,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Tareas",
+                value = tareasCount.toString(),
+                icon = Icons.Default.Assignment,
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
+        Spacer(Modifier.height(16.dp))
+        
+        StatCard(
+            title = "Evidencias Evaluadas",
+            value = evaluacionesCount.toString(),
+            icon = Icons.Default.Grade,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(32.dp))
+
+        // Shortcuts / Contact Info
+        Text(
+            text = "Información y Atajos",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(16.dp))
+        
+        ShortcutItem(icon = Icons.Default.Email, title = "Contacto Administrativo", subtitle = "soporte.docentes@edutask.edu")
+        Spacer(Modifier.height(12.dp))
+        ShortcutItem(icon = Icons.Default.Settings, title = "Ajustes de Cuenta", subtitle = "Cambiar contraseña y preferencias")
+        Spacer(Modifier.height(12.dp))
+        ShortcutItem(icon = Icons.Default.HelpOutline, title = "Soporte Técnico", subtitle = "Reportar un problema con la app")
+        Spacer(Modifier.height(12.dp))
+        ShortcutItem(
+            icon = Icons.Default.Logout,
+            title = "Cerrar Sesión",
+            subtitle = "Salir de la cuenta de forma segura",
+            onClick = onLogout
+        )
+    }
+}
+
+@Composable
+private fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = color,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+            Spacer(Modifier.height(12.dp))
+            Text(text = title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun ShortcutItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit = {}) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp))
+            }
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 

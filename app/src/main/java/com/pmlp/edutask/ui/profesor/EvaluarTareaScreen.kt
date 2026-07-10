@@ -287,7 +287,7 @@ fun EvaluarTareaScreen(
                             OutlinedTextField(
                                 value = puntaje,
                                 onValueChange = { puntaje = it },
-                                label = { Text("Puntaje (0 - 100)") },
+                                label = { Text("Puntaje (1 - 10)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = isEditMode,
@@ -312,7 +312,7 @@ fun EvaluarTareaScreen(
                                     Button(
                                         onClick = {
                                             val scoreInt = puntaje.toIntOrNull()
-                                            if (scoreInt != null && scoreInt in 0..100) {
+                                            if (scoreInt != null && scoreInt in 1..10) {
                                                 // Save official grade
                                                 isLoading = true
                                                 val califDoc = hashMapOf(
@@ -332,8 +332,8 @@ fun EvaluarTareaScreen(
 
                                                 gradeRef.set(califDoc)
                                                     .addOnSuccessListener {
-                                                        // Update evidence status: Approved if >= 60, Rejected if < 60
-                                                        val nuevoEstado = if (scoreInt >= 60) "Aprobada" else "Rechazada"
+                                                        // Update evidence status: Approved if >= 6, Rejected if < 6
+                                                        val nuevoEstado = if (scoreInt >= 6) "Aprobada" else "Rechazada"
                                                         db.collection("evidencias_tarea").document(idEvidencia)
                                                             .update("estado", nuevoEstado)
                                                             .addOnSuccessListener {
@@ -349,7 +349,7 @@ fun EvaluarTareaScreen(
                                                     }
                                             } else {
                                                 scope.launch {
-                                                    snackbarHostState.showSnackbar("Por favor ingresa un puntaje válido entre 0 y 100.")
+                                                    snackbarHostState.showSnackbar("Por favor ingresa un puntaje válido entre 1 y 10.")
                                                 }
                                             }
                                         },
@@ -366,7 +366,7 @@ fun EvaluarTareaScreen(
                                         OutlinedButton(
                                             onClick = {
                                                 val scoreInt = puntaje.toIntOrNull()
-                                                if (scoreInt != null && scoreInt in 0..100) {
+                                                if (scoreInt != null && scoreInt in 1..10) {
                                                     // Save draft grade
                                                     isLoading = true
                                                     val califDoc = hashMapOf(
@@ -402,7 +402,7 @@ fun EvaluarTareaScreen(
                                                         }
                                                 } else {
                                                     scope.launch {
-                                                        snackbarHostState.showSnackbar("Por favor ingresa un puntaje válido entre 0 y 100.")
+                                                        snackbarHostState.showSnackbar("Por favor ingresa un puntaje válido entre 1 y 10.")
                                                     }
                                                 }
                                             },
