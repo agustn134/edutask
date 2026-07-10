@@ -295,7 +295,7 @@ fun EstadisticasTareaScreen(
                                     ) {
                                         Text(
                                             text = when (report.status) {
-                                                "Calificada" -> "${report.score} / 100"
+                                                "Calificada" -> "${report.score} / 10"
                                                 "Pendiente" -> "Pendiente"
                                                 else -> "Sin entregar"
                                             },

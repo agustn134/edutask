@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            EduTaskTheme(darkTheme = false, dynamicColor = true) {
+            EduTaskTheme(darkTheme = false, dynamicColor = false) {
                 EduTaskNavGraph()
             }
         }
