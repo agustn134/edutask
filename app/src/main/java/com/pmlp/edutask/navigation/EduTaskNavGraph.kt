@@ -20,6 +20,10 @@ import com.pmlp.edutask.ui.coordinador.FormularioEventoScreen
 import com.pmlp.edutask.ui.coordinador.ListaEventosScreen
 import com.pmlp.edutask.ui.login.LoginScreen
 import com.pmlp.edutask.ui.profesor.HomeProfesorScreen
+import com.pmlp.edutask.ui.profesor.CrearTareaScreen
+import com.pmlp.edutask.ui.profesor.EvaluarTareaScreen
+import com.pmlp.edutask.ui.profesor.AlumnosClaseScreen
+import com.pmlp.edutask.ui.profesor.EstadisticasTareaScreen
 import java.util.Date
 
 object EduTaskRoutes {
@@ -33,6 +37,10 @@ object EduTaskRoutes {
     const val FORMULARIO_EVENTO = "formulario_evento?idEvento={idEvento}"
     const val ENVIAR_EVIDENCIA =
         "enviar_evidencia/{idAsignacion}/{idTarea}/{titulo}/{descripcion}/{fechaLimite}/{nombreClase}/{nombreAlumno}"
+    const val CREAR_TAREA   = "crear_tarea/{idUsuario}?idTarea={idTarea}"
+    const val EVALUAR_TAREA = "evaluar_tarea/{idEvidencia}/{idUsuario}"
+    const val ALUMNOS_CLASE = "alumnos_clase/{idClase}/{nombreClase}"
+    const val ESTADISTICAS_TAREA = "estadisticas_tarea/{idTarea}/{tituloTarea}"
 
     fun homeAlumno(idUsuario: String, nombre: String, carrera: String) =
         "home_alumno/${enc(idUsuario)}/${enc(nombre)}/${enc(carrera)}"
@@ -58,6 +66,11 @@ object EduTaskRoutes {
     ) = "enviar_evidencia/${enc(idAsignacion)}/${enc(tarea.idTarea)}/${enc(tarea.titulo)}" +
         "/${enc(tarea.descripcion)}/${tarea.fechaLimite.time}" +
         "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}"
+
+    fun crearTarea(idUsuario: String, idTarea: String? = null)  = "crear_tarea/${enc(idUsuario)}" + if (idTarea != null) "?idTarea=${enc(idTarea)}" else ""
+    fun evaluarTarea(idEvidencia: String, idUsuario: String)  = "evaluar_tarea/${enc(idEvidencia)}/${enc(idUsuario)}"
+    fun alumnosClase(idClase: String, nombreClase: String)  = "alumnos_clase/${enc(idClase)}/${enc(nombreClase)}"
+    fun estadisticasTarea(idTarea: String, tituloTarea: String)  = "estadisticas_tarea/${enc(idTarea)}/${enc(tituloTarea)}"
 
     fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
     fun dec(s: String?): String = if (s != null) java.net.URLDecoder.decode(s, "UTF-8") else ""
@@ -99,11 +112,23 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
         }
 
         composable(EduTaskRoutes.HOME_PROFESOR) { back ->
+            val idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
             HomeProfesorScreen(
-                idUsuario      = EduTaskRoutes.dec(back.arguments?.getString("idUsuario")),
+                idUsuario      = idUsuario,
                 nombreProfesor = EduTaskRoutes.dec(back.arguments?.getString("nombre")),
                 claseActual    = EduTaskRoutes.dec(back.arguments?.getString("clase")),
-                onCrearTarea   = {},
+                onCrearTarea   = { idUser, idTar ->
+                    navController.navigate(EduTaskRoutes.crearTarea(idUser, idTar))
+                },
+                onVerEvidencia = { idEvidencia ->
+                    navController.navigate(EduTaskRoutes.evaluarTarea(idEvidencia, idUsuario))
+                },
+                onVerAlumnos = { idClase, nombreClase ->
+                    navController.navigate(EduTaskRoutes.alumnosClase(idClase, nombreClase))
+                },
+                onVerEstadisticas = { idTarea, titulo ->
+                    navController.navigate(EduTaskRoutes.estadisticasTarea(idTarea, titulo))
+                },
                 onLogout       = { navController.navigate(EduTaskRoutes.LOGIN) { popUpTo(0) { inclusive = true } } }
             )
         }
@@ -180,6 +205,63 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
                 viewModel = viewModel,
                 idEvento = idEvento,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = EduTaskRoutes.CREAR_TAREA,
+            arguments = listOf(
+                navArgument("idTarea") {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { back ->
+            val idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
+            val idTarea = back.arguments?.getString("idTarea")?.let { EduTaskRoutes.dec(it) }
+            CrearTareaScreen(
+                idUsuario = idUsuario,
+                idTarea = idTarea,
+                onTareaCreadaExitosa = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(EduTaskRoutes.EVALUAR_TAREA) { back ->
+            val idEvidencia = EduTaskRoutes.dec(back.arguments?.getString("idEvidencia"))
+            val idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
+            EvaluarTareaScreen(
+                idEvidencia = idEvidencia,
+                idUsuario = idUsuario,
+                onEvaluadoExitoso = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(EduTaskRoutes.ALUMNOS_CLASE) { back ->
+            val idClase = EduTaskRoutes.dec(back.arguments?.getString("idClase"))
+            val nombreClase = EduTaskRoutes.dec(back.arguments?.getString("nombreClase"))
+            AlumnosClaseScreen(
+                idClase = idClase,
+                nombreClase = nombreClase,
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(EduTaskRoutes.ESTADISTICAS_TAREA) { back ->
+            val idTarea = EduTaskRoutes.dec(back.arguments?.getString("idTarea"))
+            val tituloTarea = EduTaskRoutes.dec(back.arguments?.getString("tituloTarea"))
+            EstadisticasTareaScreen(
+                idTarea = idTarea,
+                tituloTarea = tituloTarea,
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
     }

@@ -2,7 +2,6 @@ package com.pmlp.edutask.ui.profesor
 
 import android.app.Activity
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,13 +16,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.EvidenciaTarea
+import com.pmlp.edutask.model.Tarea
+import com.pmlp.edutask.model.ClaseInfo
 import com.pmlp.edutask.ui.theme.EduTaskTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pmlp.edutask.ui.EventosSharedViewModel
@@ -45,8 +49,8 @@ private data class AccesoRapido(val label: String, val icon: ImageVector)
 private val ACCESOS = listOf(
     AccesoRapido("Mis Clases",     Icons.Default.School),
     AccesoRapido("Calificaciones", Icons.Default.Grade),
-    AccesoRapido("Estadisticas",   Icons.Default.BarChart),
-    AccesoRapido("Configuracion",  Icons.Default.Settings)
+    AccesoRapido("Estadísticas",   Icons.Default.BarChart),
+    AccesoRapido("Configuración",  Icons.Default.Settings)
 )
 
 private data class ProfNavItem(val label: String, val icon: ImageVector)
@@ -64,19 +68,145 @@ fun HomeProfesorScreen(
     nombreProfesor: String   = "Mtro. Perez",
     claseActual: String      = "Programacion Movil PMLP",
     eventosViewModel: EventosSharedViewModel = viewModel(),
-    onCrearTarea: () -> Unit = {},
+    onCrearTarea: (String, String?) -> Unit = { _, _ -> },
+    onVerEvidencia: (String) -> Unit = {},
+    onVerAlumnos: (String, String) -> Unit = { _, _ -> },
+    onVerEstadisticas: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit     = {}
 ) {
-    val context   = LocalContext.current
-    val winSize   = calculateWindowSizeClass(activity = context as Activity)
+    val winSize   = calculateWindowSizeClass(activity = androidx.compose.ui.platform.LocalContext.current as Activity)
     val isCompact = winSize.widthSizeClass == WindowWidthSizeClass.Compact
 
     var selectedNav   by remember { mutableIntStateOf(0) }
     var showClassDialog by remember { mutableStateOf(false) }
     var nuevaClaseNombre by remember { mutableStateOf("") }
+    var nuevaClaseDesc by remember { mutableStateOf("") }
+    var nuevaClaseEnlace by remember { mutableStateOf("") }
+    var editingClaseId by remember { mutableStateOf<String?>(null) }
+    
+    val scope = rememberCoroutineScope()
+    var inscripcionesMap by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
 
-    val pendientes    = EVIDENCIAS.count { it.estado == EstadoEvidencia.Pendiente }
-    val initials      = nombreProfesor.split(" ").filter { it.length > 2 }.take(2)
+    // Estado para manejar las evidencias reales traídas de Firebase
+    var listaEvidencias by remember { mutableStateOf<List<EvidenciaTarea>>(emptyList()) }
+    val db = remember { FirebaseFirestore.getInstance() }
+
+    // Real-time listener for classes of this professor
+    var listaClases by remember { mutableStateOf<List<ClaseInfo>>(emptyList()) }
+    DisposableEffect(idUsuario) {
+        if (idUsuario.isBlank()) return@DisposableEffect onDispose {}
+        val listener = db.collection("clases")
+            .whereEqualTo("idUsuario", idUsuario)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                listaClases = snapshot.documents.map { doc ->
+                    ClaseInfo(
+                        idClase = doc.id,
+                        nombre = doc.getString("nombre") ?: "Sin Nombre",
+                        descripcion = doc.getString("descripcion") ?: "Sin Descripción",
+                        enlace = doc.getString("enlace") ?: ""
+                    )
+                }
+            }
+        onDispose { listener.remove() }
+    }
+
+    // Real-time listener for enrolled students
+    DisposableEffect(listaClases) {
+        if (listaClases.isEmpty()) return@DisposableEffect onDispose {}
+        val clasesIds = listaClases.map { it.idClase }
+        val listener = db.collection("clase_alumno")
+            .whereIn("idClase", clasesIds)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                scope.launch {
+                    val tempMap = mutableMapOf<String, MutableList<String>>()
+                    snapshot.documents.forEach { doc ->
+                        val idClase = doc.getString("idClase") ?: return@forEach
+                        val idAlumno = doc.getString("idUsuario") ?: return@forEach
+                        
+                        val userDoc = db.collection("usuarios").document(idAlumno).get().await()
+                        val name = userDoc.getString("nombre") ?: "Alumno Sin Nombre"
+                        
+                        val list = tempMap.getOrPut(idClase) { mutableListOf() }
+                        if (!list.contains(name)) {
+                            list.add(name)
+                        }
+                    }
+                    inscripcionesMap = tempMap
+                }
+            }
+        onDispose { listener.remove() }
+    }
+
+    var listaTareas by remember { mutableStateOf<List<Tarea>>(emptyList()) }
+    // Real-time listener for tasks of this professor's classes
+    DisposableEffect(listaClases) {
+        if (listaClases.isEmpty()) return@DisposableEffect onDispose {}
+        val clasesIds = listaClases.map { it.idClase }
+        val listener = db.collection("tareas")
+            .whereIn("idClase", clasesIds)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                listaTareas = snapshot.documents.map { doc ->
+                    val dateTimestamp = doc.getTimestamp("fechaLimite")
+                    val date = dateTimestamp?.toDate() ?: Date()
+                    Tarea(
+                        idTarea = doc.id,
+                        titulo = doc.getString("titulo") ?: "Sin Título",
+                        descripcion = doc.getString("descripcion") ?: "",
+                        fechaLimite = date,
+                        idClase = doc.getString("idClase") ?: "",
+                        nombreClase = doc.getString("nombreClase") ?: ""
+                    )
+                }
+            }
+        onDispose { listener.remove() }
+    }
+
+    // Listener en tiempo real conectado a Firestore
+    DisposableEffect(Unit) {
+        val listener = db.collection("evidencias_tarea")
+            .orderBy("fechaEnvio", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+
+                val evidenciasMapeadas = snapshot.documents.map { doc ->
+                    val estadoStr = doc.getString("estado") ?: "Pendiente"
+                    val estadoEnum = when (estadoStr.lowercase()) {
+                        "aprobada" -> EstadoEvidencia.Aprobada
+                        "rechazada" -> EstadoEvidencia.Rechazada
+                        else -> EstadoEvidencia.Pendiente
+                    }
+
+                    val idEvidenciaRaw = doc.get("idEvidencia")
+                    val idEvidenciaStr = when (idEvidenciaRaw) {
+                        is Number -> idEvidenciaRaw.toLong().toString()
+                        else -> idEvidenciaRaw?.toString() ?: doc.id
+                    }
+                    val idAsignacionRaw = doc.get("idAsignacion")
+                    val idAsignacionStr = when (idAsignacionRaw) {
+                        is Number -> idAsignacionRaw.toLong().toString()
+                        else -> idAsignacionRaw?.toString() ?: ""
+                    }
+                    EvidenciaTarea(
+                        idEvidencia = idEvidenciaStr,
+                        tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
+                        fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
+                        fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
+                        estado = estadoEnum,
+                        idAsignacion = idAsignacionStr,
+                        nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
+                    )
+                }
+                listaEvidencias = evidenciasMapeadas
+            }
+
+        onDispose { listener.remove() } // Limpia el listener cuando sales de la pantalla
+    }
+
+    val pendientes = listaEvidencias.count { it.estado == EstadoEvidencia.Pendiente }
+    val initials   = nombreProfesor.split(" ").filter { it.length > 2 }.take(2)
         .joinToString("") { it.first().toString().uppercase() }.ifBlank { "P" }
 
     val eventosState by eventosViewModel.uiState.collectAsState()
@@ -88,16 +218,36 @@ fun HomeProfesorScreen(
     // Diálogo para Crear Clase Nueva
     if (showClassDialog) {
         AlertDialog(
-            onDismissRequest = { showClassDialog = false },
+            onDismissRequest = { 
+                showClassDialog = false 
+                nuevaClaseNombre = ""
+                nuevaClaseDesc = ""
+                nuevaClaseEnlace = ""
+                editingClaseId = null
+            },
             icon    = { Icon(Icons.Default.Class, null) },
-            title   = { Text("Crear Nueva Clase", style = MaterialTheme.typography.headlineSmall) },
+            title   = { Text(if (editingClaseId == null) "Crear Nueva Clase" else "Editar Clase", style = MaterialTheme.typography.headlineSmall) },
             text    = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Ingresa el nombre de la asignatura académica.", style = MaterialTheme.typography.bodyMedium)
+                    Text("Ingresa los detalles de la asignatura académica.", style = MaterialTheme.typography.bodyMedium)
                     OutlinedTextField(
                         value = nuevaClaseNombre,
                         onValueChange = { nuevaClaseNombre = it },
                         label = { Text("Nombre de la Clase") },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = nuevaClaseDesc,
+                        onValueChange = { nuevaClaseDesc = it },
+                        label = { Text("Descripción de la Clase") },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = nuevaClaseEnlace,
+                        onValueChange = { nuevaClaseEnlace = it },
+                        label = { Text("Enlace de videoconferencia") },
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -106,23 +256,43 @@ fun HomeProfesorScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        showClassDialog = false
-                        // Aquí se conectará con Firebase para guardar la clase
-                        nuevaClaseNombre = ""
+                        if (nuevaClaseNombre.isNotBlank()) {
+                            val nuevaClase = hashMapOf(
+                                "nombre" to nuevaClaseNombre.trim(),
+                                "descripcion" to nuevaClaseDesc.trim(),
+                                "enlace" to nuevaClaseEnlace.trim(),
+                                "idUsuario" to idUsuario
+                            )
+                            val classId = editingClaseId ?: generateShortCode()
+                            db.collection("clases").document(classId).set(nuevaClase)
+                            
+                            showClassDialog = false
+                            nuevaClaseNombre = ""
+                            nuevaClaseDesc = ""
+                            nuevaClaseEnlace = ""
+                            editingClaseId = null
+                        }
                     },
-                    enabled = nuevaClaseNombre.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Guardar", style = MaterialTheme.typography.labelLarge)
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showClassDialog = false }) {
+                OutlinedButton(onClick = { 
+                    showClassDialog = false 
+                    nuevaClaseNombre = ""
+                    nuevaClaseDesc = ""
+                    nuevaClaseEnlace = ""
+                    editingClaseId = null
+                }) {
                     Text("Cancelar", style = MaterialTheme.typography.labelLarge)
                 }
             }
         )
     }
+
+
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -148,7 +318,7 @@ fun HomeProfesorScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onLogout) { Icon(Icons.Default.Logout, contentDescription = "Cerrar Sesion") }
+                    IconButton(onClick = onLogout) { Icon(Icons.Default.Logout, contentDescription = "Cerrar Sesión") }
                 },
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
@@ -157,9 +327,9 @@ fun HomeProfesorScreen(
             )
         },
         floatingActionButton = {
-            if (selectedNav ==  1) {
+            if (selectedNav == 1) {
                 ExtendedFloatingActionButton(
-                    onClick = onCrearTarea,
+                    onClick = { onCrearTarea(idUsuario, null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(16.dp),
@@ -198,9 +368,39 @@ fun HomeProfesorScreen(
             } else emptyList()
 
             when (selectedNav) {
-                0 -> InicioContent(pendientes, claseActual, eventos, onCrearTarea)
-                1 -> TareasContent(claseActual)
-                2 -> ClasesContent()
+                0 -> InicioContent(
+                    pendientes = pendientes,
+                    claseActual = claseActual,
+                    eventos = eventos,
+                    evidencias = listaEvidencias,
+                    onCrearTarea = { onCrearTarea(idUsuario, null) },
+                    onVerClick = { onVerEvidencia(it.idEvidencia) }
+                )
+                1 -> TareasContent(
+                    tareas = listaTareas,
+                    clases = listaClases,
+                    idUsuario = idUsuario,
+                    onEditTarea = onCrearTarea,
+                    onDeleteTarea = { idTarea ->
+                        db.collection("tareas").document(idTarea).delete()
+                    },
+                    onVerEstadisticas = onVerEstadisticas
+                )
+                2 -> ClasesContent(
+                    clases = listaClases,
+                    inscripciones = inscripcionesMap,
+                    onEditClase = { clase ->
+                        nuevaClaseNombre = clase.nombre
+                        nuevaClaseDesc = clase.descripcion
+                        nuevaClaseEnlace = clase.enlace
+                        editingClaseId = clase.idClase
+                        showClassDialog = true
+                    },
+                    onDeleteClase = { idClase ->
+                        db.collection("clases").document(idClase).delete()
+                    },
+                    onVerAlumnos = onVerAlumnos
+                )
                 3 -> PerfilContent(nombreProfesor)
             }
         }
@@ -208,7 +408,24 @@ fun HomeProfesorScreen(
 }
 
 @Composable
-private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Evento>, onCrearTarea: () -> Unit) {
+private fun InicioContent(
+    pendientes: Int,
+    claseActual: String,
+    eventos: List<Evento>,
+    evidencias: List<EvidenciaTarea>,
+    onCrearTarea: () -> Unit,
+    onVerClick: (EvidenciaTarea) -> Unit
+) {
+    var selectedStatusFilter by remember { mutableStateOf<EstadoEvidencia?>(null) }
+
+    val filteredEvidencias = remember(evidencias, selectedStatusFilter) {
+        if (selectedStatusFilter == null) {
+            evidencias
+        } else {
+            evidencias.filter { it.estado == selectedStatusFilter }
+        }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -233,12 +450,11 @@ private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Ev
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
                 colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Row(Modifier.fillMaxWidth().padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Estatus de Aula", style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
-                        Text("Tienes actividades pendientes por evaluar.", style = MaterialTheme.typography.bodySmall,
+                        Text(if (pendientes > 0) "Tienes $pendientes actividades pendientes por evaluar." else "Al corriente con tus evaluaciones académicas.", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
@@ -251,7 +467,88 @@ private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Ev
                     contentColor   = MaterialTheme.colorScheme.onTertiary) { Text(pendientes.toString()) }
             }
         }
-        items(EVIDENCIAS) { ev -> EvidenciaListItem(ev) }
+
+        // Status Filter Chips LazyRow
+        item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 4.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == null,
+                        onClick = { selectedStatusFilter = null },
+                        label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == null) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == EstadoEvidencia.Pendiente,
+                        onClick = { selectedStatusFilter = EstadoEvidencia.Pendiente },
+                        label = { Text("Pendientes", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == EstadoEvidencia.Pendiente) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == EstadoEvidencia.Aprobada,
+                        onClick = { selectedStatusFilter = EstadoEvidencia.Aprobada },
+                        label = { Text("Aprobadas", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == EstadoEvidencia.Aprobada) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == EstadoEvidencia.Rechazada,
+                        onClick = { selectedStatusFilter = EstadoEvidencia.Rechazada },
+                        label = { Text("Rechazadas", style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            if (selectedStatusFilter == EstadoEvidencia.Rechazada) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        if (filteredEvidencias.isEmpty()) {
+            item {
+                Text("No hay entregas registradas con este estado.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp))
+            }
+        } else {
+            items(filteredEvidencias) { ev -> EvidenciaListItem(ev, onVerClick) }
+        }
+
         item { Spacer(Modifier.height(16.dp)) }
         item { Text("Acceso Rápido", style = MaterialTheme.typography.titleLarge) }
         item {
@@ -267,23 +564,191 @@ private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Ev
 }
 
 @Composable
-private fun TareasContent(claseActual: String) {
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+private fun TareasContent(
+    tareas: List<Tarea>,
+    clases: List<ClaseInfo>,
+    idUsuario: String,
+    onEditTarea: (String, String?) -> Unit,
+    onDeleteTarea: (String) -> Unit,
+    onVerEstadisticas: (String, String) -> Unit
+) {
+    var selectedClaseFilterId by remember { mutableStateOf<String?>(null) }
+
+    val filteredTareas = remember(tareas, selectedClaseFilterId) {
+        if (selectedClaseFilterId == null) {
+            tareas
+        } else {
+            tareas.filter { it.idClase == selectedClaseFilterId }
+        }
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Panel de Actividades", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
-        item { Text("Lista de tareas vigentes asignadas a la clase $claseActual.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        // Aquí se iterarán las tareas ligadas desde Firebase en el futuro
+        item { Text("Lista de tareas vigentes asignadas a tus clases.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        
+        // Sección de Filtros de Clase
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.FilterList, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text("Filtrar por Clase", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(end = 8.dp)
+                ) {
+                    // Chip para "Todas"
+                    item {
+                        FilterChip(
+                            selected = selectedClaseFilterId == null,
+                            onClick = { selectedClaseFilterId = null },
+                            label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                if (selectedClaseFilterId == null) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    // Chips de cada clase
+                    items(clases) { clase ->
+                        FilterChip(
+                            selected = selectedClaseFilterId == clase.idClase,
+                            onClick = { selectedClaseFilterId = clase.idClase },
+                            label = { Text(clase.nombre, style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                if (selectedClaseFilterId == clase.idClase) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (filteredTareas.isEmpty()) {
+            item {
+                Text("No hay tareas creadas para tus clases.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            items(filteredTareas) { tarea ->
+                OutlinedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(tarea.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            
+                            IconButton(onClick = { onVerEstadisticas(tarea.idTarea, tarea.titulo) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.BarChart, "Estadísticas", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = { onEditTarea(idUsuario, tarea.idTarea) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = { onDeleteTarea(tarea.idTarea) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(tarea.descripcion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SuggestionChip(
+                                onClick = {},
+                                label = { Text(tarea.nombreClase) },
+                                icon = { Icon(Icons.Default.Class, null, Modifier.size(16.dp)) }
+                            )
+                            Spacer(Modifier.weight(1f))
+                            val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
+                            Text("Límite: " + fmt.format(tarea.fechaLimite), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun ClasesContent() {
+private fun ClasesContent(
+    clases: List<ClaseInfo>,
+    inscripciones: Map<String, List<String>>,
+    onEditClase: (ClaseInfo) -> Unit,
+    onDeleteClase: (String) -> Unit,
+    onVerAlumnos: (String, String) -> Unit
+) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Mis Asignaturas", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
-        item {
-            OutlinedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Programación Móvil PMLP", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text("Código de unión: EDUTASK-6093", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+        if (clases.isEmpty()) {
+            item {
+                Text("No tienes asignaturas registradas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            items(clases) { clase ->
+                OutlinedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(clase.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            
+                            IconButton(onClick = { onVerAlumnos(clase.idClase, clase.nombre) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.People, "Ver Alumnos", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = { onEditClase(clase) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Edit, "Editar", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = { onDeleteClase(clase.idClase) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(clase.descripcion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        
+                        if (clase.enlace.isNotBlank()) {
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.Link, "Enlace", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Text(clase.enlace, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                        
+                        // Enrolled Students list
+                        val alumnos = inscripciones.getOrDefault(clase.idClase, emptyList())
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Alumnos Inscritos (${alumnos.size}):",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (alumnos.isEmpty()) {
+                            Text("Sin alumnos inscritos aún.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            Text(alumnos.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        
+                        Spacer(Modifier.height(12.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                "Código de unión: ${clase.idClase}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -299,26 +764,25 @@ private fun PerfilContent(nombre: String) {
 }
 
 @Composable
-fun EvidenciaListItem(evidencia: EvidenciaTarea) {
-    val fmt = SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault())
+fun EvidenciaListItem(
+    evidencia: EvidenciaTarea,
+    onVerClick: (EvidenciaTarea) -> Unit
+) {
+    val fmt = java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.getDefault())
     val isPend = evidencia.estado == EstadoEvidencia.Pendiente
     OutlinedCard(modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
         ListItem(
-            headlineContent = { Text(evidencia.tituloTarea, style = MaterialTheme.typography.titleSmall) },
-            supportingContent = {
-                Column {
-                    Text(evidencia.nombreAlumno, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Enviado: ${fmt.format(evidencia.fechaEnvio)}", style = MaterialTheme.typography.labelSmall)
-                }
-            },
-            leadingContent = {
+            headlineContent   = { Text(evidencia.nombreAlumno, style = MaterialTheme.typography.titleSmall) },
+            supportingContent = { Text(evidencia.tituloTarea, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            leadingContent    = {
                 Surface(Modifier.size(12.dp), shape = MaterialTheme.shapes.extraLarge,
                     color = if (isPend) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) {}
             },
             trailingContent = {
                 Column(horizontalAlignment = Alignment.End) {
+                    Text(fmt.format(evidencia.fechaEnvio), style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.height(4.dp))
-                    OutlinedButton(onClick = {}, modifier = Modifier.height(28.dp)) {
+                    OutlinedButton(onClick = { onVerClick(evidencia) }, modifier = Modifier.height(28.dp)) {
                         Text("Ver", style = MaterialTheme.typography.labelSmall)
                     }
                 }
@@ -342,6 +806,11 @@ private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier
             Text(acceso.label, style = MaterialTheme.typography.labelMedium)
         }
     }
+}
+
+private fun generateShortCode(): String {
+    val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    return (1..6).map { chars.random() }.joinToString("")
 }
 
 @Composable
