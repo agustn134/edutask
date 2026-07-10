@@ -89,8 +89,11 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
                     else           -> RolUsuario.Alumno
                 }
 
+                val idUsuario = doc.id
+                val nombre    = doc.getString("nombre") ?: matricula
+
                 isLoading = false
-                onLoginSuccess(rol)
+                onLoginSuccess(idUsuario, nombre, rol)
 
             } catch (e: Exception) {
                 isLoading = false
