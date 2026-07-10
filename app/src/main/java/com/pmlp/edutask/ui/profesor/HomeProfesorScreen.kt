@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,7 +47,7 @@ private data class ProfNavItem(val label: String, val icon: ImageVector)
 private val PROF_NAV = listOf(
     ProfNavItem("Inicio",  Icons.Default.Home),
     ProfNavItem("Tareas",  Icons.Default.Assignment),
-    ProfNavItem("Alumnos", Icons.Default.Group),
+    ProfNavItem("Clases",  Icons.Default.School),
     ProfNavItem("Perfil",  Icons.Default.Person)
 )
 
@@ -63,157 +65,148 @@ fun HomeProfesorScreen(
     val isCompact = winSize.widthSizeClass == WindowWidthSizeClass.Compact
 
     var selectedNav   by remember { mutableIntStateOf(0) }
-    var showDialog    by remember { mutableStateOf(false) }
+    var showClassDialog by remember { mutableStateOf(false) }
+    var nuevaClaseNombre by remember { mutableStateOf("") }
+
     val pendientes    = EVIDENCIAS.count { it.estado == EstadoEvidencia.Pendiente }
     val initials      = nombreProfesor.split(" ").filter { it.length > 2 }.take(2)
-                            .joinToString("") { it.first().toString().uppercase() }.ifBlank { "P" }
+        .joinToString("") { it.first().toString().uppercase() }.ifBlank { "P" }
 
-    if (showDialog) {
+    // Diálogo para Crear Clase Nueva
+    if (showClassDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
-            icon    = { Icon(Icons.Default.AddTask, null) },
-            title   = { Text("Nueva Tarea", style = MaterialTheme.typography.headlineSmall) },
-            text    = { Text("Crear nueva tarea para $claseActual?", style = MaterialTheme.typography.bodyMedium) },
+            onDismissRequest = { showClassDialog = false },
+            icon    = { Icon(Icons.Default.Class, null) },
+            title   = { Text("Crear Nueva Clase", style = MaterialTheme.typography.headlineSmall) },
+            text    = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Ingresa el nombre de la asignatura académica.", style = MaterialTheme.typography.bodyMedium)
+                    OutlinedTextField(
+                        value = nuevaClaseNombre,
+                        onValueChange = { nuevaClaseNombre = it },
+                        label = { Text("Nombre de la Clase") },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
             confirmButton = {
-                Button(onClick = { showDialog = false; onCrearTarea() },
-                       colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                    Text("Crear", style = MaterialTheme.typography.labelLarge)
+                Button(
+                    onClick = {
+                        showClassDialog = false
+                        // Aquí se conectará con Firebase para guardar la clase
+                        nuevaClaseNombre = ""
+                    },
+                    enabled = nuevaClaseNombre.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Guardar", style = MaterialTheme.typography.labelLarge)
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDialog = false }) {
+                OutlinedButton(onClick = { showClassDialog = false }) {
                     Text("Cancelar", style = MaterialTheme.typography.labelLarge)
                 }
             }
         )
     }
 
-    if (isCompact) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor   = MaterialTheme.colorScheme.onBackground,
-            topBar = {
-                LargeTopAppBar(
-                    navigationIcon = {
-                        Surface(Modifier.padding(start = 12.dp).size(40.dp),
-                                shape = MaterialTheme.shapes.extraLarge,
-                                color = MaterialTheme.colorScheme.secondaryContainer) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(initials, style = MaterialTheme.typography.labelLarge,
-                                     color = MaterialTheme.colorScheme.onSecondaryContainer)
-                            }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor   = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            LargeTopAppBar(
+                navigationIcon = {
+                    Surface(Modifier.padding(start = 12.dp).size(40.dp),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.secondaryContainer) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(initials, style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
-                    },
-                    title = {
-                        Column {
-                            Text("Hola, $nombreProfesor", style = MaterialTheme.typography.headlineSmall,
-                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(claseActual, style = MaterialTheme.typography.bodySmall,
-                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = {}) { Icon(Icons.Default.Settings, contentDescription = "Configuracion") }
-                    },
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                )
-            },
-            bottomBar = {
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                              contentColor   = MaterialTheme.colorScheme.onSurfaceVariant) {
-                    PROF_NAV.forEachIndexed { i, item ->
-                        NavigationBarItem(selected = selectedNav == i, onClick = { selectedNav = i },
-                            icon = {
-                                if (i == 1 && pendientes > 0)
-                                    BadgedBox(badge = { Badge { Text(pendientes.toString()) } }) { Icon(item.icon, null) }
-                                else Icon(item.icon, null)
-                            },
-                            label = { Text(item.label, style = MaterialTheme.typography.labelMedium) })
                     }
-                }
+                },
+                title = {
+                    Column {
+                        Text("Hola, $nombreProfesor", style = MaterialTheme.typography.headlineSmall,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if(selectedNav == 2) "Gestión Académica" else claseActual, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onLogout) { Icon(Icons.Default.Logout, contentDescription = "Cerrar Sesion") }
+                },
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        },
+        floatingActionButton = {
+            if (selectedNav ==  1) {
+                ExtendedFloatingActionButton(
+                    onClick = onCrearTarea,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(16.dp),
+                    icon = { Icon(Icons.Default.AddTask, null) },
+                    text = { Text("Nueva Tarea") }
+                )
+            } else if (selectedNav == 2) {
+                ExtendedFloatingActionButton(
+                    onClick = { showClassDialog = true },
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                    shape = RoundedCornerShape(16.dp),
+                    icon = { Icon(Icons.Default.AddHomeWork, null) },
+                    text = { Text("Nueva Clase") }
+                )
             }
-        ) { pad ->
-            ProfesorContent(Modifier.padding(pad), pendientes, claseActual, { showDialog = true })
-        }
-    } else {
-        Row(Modifier.fillMaxSize()) {
-            NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                           contentColor   = MaterialTheme.colorScheme.onSurfaceVariant,
-                           header = {
-                               Spacer(Modifier.height(8.dp))
-                               Surface(Modifier.size(40.dp), shape = MaterialTheme.shapes.extraLarge,
-                                       color = MaterialTheme.colorScheme.secondaryContainer) {
-                                   Box(contentAlignment = Alignment.Center) {
-                                       Text(initials, style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer)
-                                   }
-                               }
-                               Spacer(Modifier.height(8.dp))
-                               FilledTonalButton(onClick = { showDialog = true },
-                                   colors = ButtonDefaults.filledTonalButtonColors(
-                                       containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                       contentColor   = MaterialTheme.colorScheme.onPrimaryContainer)) {
-                                   Icon(Icons.Default.Add, null, Modifier.size(18.dp))
-                                   Spacer(Modifier.width(4.dp))
-                                   Text("Crear", style = MaterialTheme.typography.labelMedium)
-                               }
-                           }) {
+        },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor   = MaterialTheme.colorScheme.onSurfaceVariant) {
                 PROF_NAV.forEachIndexed { i, item ->
-                    NavigationRailItem(selected = selectedNav == i, onClick = { selectedNav = i },
-                        icon = { Icon(item.icon, null) }, label = { Text(item.label) })
+                    NavigationBarItem(selected = selectedNav == i, onClick = { selectedNav = i },
+                        icon = {
+                            if (i == 0 && pendientes > 0)
+                                BadgedBox(badge = { Badge { Text(pendientes.toString()) } }) { Icon(item.icon, null) }
+                            else Icon(item.icon, null)
+                        },
+                        label = { Text(item.label, style = MaterialTheme.typography.labelMedium) })
                 }
             }
-            Scaffold(Modifier.weight(1f), containerColor = MaterialTheme.colorScheme.background,
-                     topBar = {
-                         LargeTopAppBar(
-                             title = {
-                                 Column {
-                                     Text("Hola, $nombreProfesor", style = MaterialTheme.typography.headlineMedium)
-                                     Text(claseActual, style = MaterialTheme.typography.bodyMedium,
-                                          color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                 }
-                             },
-                             actions = { IconButton(onClick = {}) { Icon(Icons.Default.Settings, "Configuracion") } },
-                             colors = TopAppBarDefaults.largeTopAppBarColors(
-                                 containerColor = MaterialTheme.colorScheme.surface,
-                                 scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                             )
-                         )
-                     }) { pad ->
-                ProfesorContent(Modifier.padding(pad), pendientes, claseActual, { showDialog = true })
+        }
+    ) { pad ->
+        Box(modifier = Modifier.padding(pad).fillMaxSize()) {
+            when (selectedNav) {
+                0 -> InicioContent(pendientes, claseActual, onCrearTarea)
+                1 -> TareasContent(claseActual)
+                2 -> ClasesContent()
+                3 -> PerfilContent(nombreProfesor)
             }
         }
     }
 }
 
 @Composable
-private fun ProfesorContent(modifier: Modifier, pendientes: Int, claseActual: String, onCrearTarea: () -> Unit) {
-    LazyColumn(modifier = modifier.fillMaxSize(),
-               contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-               verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun InicioContent(pendientes: Int, claseActual: String, onCrearTarea: () -> Unit) {
+    LazyColumn(modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ElevatedCard(modifier = Modifier.fillMaxWidth(),
-                         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                         colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Row(Modifier.fillMaxWidth().padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(Modifier.weight(1f)) {
-                        Text("Nueva Tarea", style = MaterialTheme.typography.titleMedium,
-                             color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text("Asigna actividades a tus alumnos", style = MaterialTheme.typography.bodySmall,
-                             color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                    FilledTonalButton(onClick = onCrearTarea,
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor   = MaterialTheme.colorScheme.onPrimary)) {
-                        Icon(Icons.Default.Add, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Crear", style = MaterialTheme.typography.labelLarge)
+                        Text("Estatus de Aula", style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                        Text("Tienes actividades pendientes por evaluar.", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
             }
@@ -222,15 +215,12 @@ private fun ProfesorContent(modifier: Modifier, pendientes: Int, claseActual: St
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Evidencias Recientes", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 if (pendientes > 0) Badge(containerColor = MaterialTheme.colorScheme.tertiary,
-                                         contentColor   = MaterialTheme.colorScheme.onTertiary) { Text(pendientes.toString()) }
-                TextButton(onClick = {}) { Text("Ver todas", style = MaterialTheme.typography.labelMedium) }
+                    contentColor   = MaterialTheme.colorScheme.onTertiary) { Text(pendientes.toString()) }
             }
-            Text("Pendientes de calificacion", style = MaterialTheme.typography.bodySmall,
-                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         items(EVIDENCIAS) { ev -> EvidenciaListItem(ev) }
-        item { HorizontalDivider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
-        item { Text("Acceso Rapido", style = MaterialTheme.typography.titleLarge) }
+        item { Spacer(Modifier.height(16.dp)) }
+        item { Text("Acceso Rápido", style = MaterialTheme.typography.titleLarge) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 ACCESOS.chunked(2).forEach { fila ->
@@ -240,7 +230,38 @@ private fun ProfesorContent(modifier: Modifier, pendientes: Int, claseActual: St
                 }
             }
         }
-        item { Spacer(Modifier.height(32.dp)) }
+    }
+}
+
+@Composable
+private fun TareasContent(claseActual: String) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Text("Panel de Actividades", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item { Text("Lista de tareas vigentes asignadas a la clase $claseActual.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        // Aquí se iterarán las tareas ligadas desde Firebase en el futuro
+    }
+}
+
+@Composable
+private fun ClasesContent() {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("Mis Asignaturas", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item {
+            OutlinedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Programación Móvil PMLP", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("Código de unión: EDUTASK-6093", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PerfilContent(nombre: String) {
+    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text(nombre, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Rol: Docente / Coordinador", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -250,52 +271,38 @@ fun EvidenciaListItem(evidencia: EvidenciaTarea) {
     val isPend = evidencia.estado == EstadoEvidencia.Pendiente
     OutlinedCard(modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
         ListItem(
-            headlineContent   = { Text(evidencia.nombreAlumno, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            supportingContent = { Text(evidencia.tituloTarea, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            headlineContent   = { Text(evidencia.nombreAlumno, style = MaterialTheme.typography.titleSmall) },
+            supportingContent = { Text(evidencia.tituloTarea, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
             leadingContent    = {
                 Surface(Modifier.size(12.dp), shape = MaterialTheme.shapes.extraLarge,
-                        color = if (isPend) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) {}
+                    color = if (isPend) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) {}
             },
             trailingContent = {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(evidencia.fechaEnvio.format(fmt), style = MaterialTheme.typography.labelSmall,
-                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(evidencia.fechaEnvio.format(fmt), style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.height(4.dp))
-                    OutlinedButton(onClick = {}, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                                   modifier = Modifier.height(28.dp)) {
+                    OutlinedButton(onClick = {}, modifier = Modifier.height(28.dp)) {
                         Text("Ver", style = MaterialTheme.typography.labelSmall)
                     }
                 }
-            },
-            colors   = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier.clickable {}
+            }
         )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
 @Composable
 private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier) {
-    ElevatedCard(modifier = modifier, onClick = {},
-                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                 colors    = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    ElevatedCard(modifier = modifier,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)) {
         Column(Modifier.fillMaxWidth().padding(16.dp),
-               horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Surface(Modifier.size(48.dp), shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.secondaryContainer) {
+                color = MaterialTheme.colorScheme.secondaryContainer) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(acceso.icon, contentDescription = acceso.label, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
             }
-            Text(acceso.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(acceso.label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
-
-@Preview(name = "Home Profesor Movil", showBackground = true, showSystemUi = true, widthDp = 360, heightDp = 800)
-@Composable
-private fun PreviewProfesorMovil() { EduTaskTheme(darkTheme = false, dynamicColor = false) { HomeProfesorScreen() } }
-
-@Preview(name = "Home Profesor Tablet", showBackground = true, showSystemUi = true, widthDp = 800, heightDp = 1280)
-@Composable
-private fun PreviewProfesorTablet() { EduTaskTheme(darkTheme = false, dynamicColor = false) { HomeProfesorScreen() } }
