@@ -1,6 +1,6 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter to find the
- * most up to date changes to the libraries and their usages.
+/* EduTask — Wear OS
+ * Módulo de calificación rápida para el profesor.
+ * Pantallas: lista de evidencias pendientes → calificación con un toque.
  */
 
 package com.pmlp.wear.presentation
@@ -8,108 +8,67 @@ package com.pmlp.wear.presentation
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
-import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
-import androidx.wear.compose.material3.AppScaffold
-import androidx.wear.compose.material3.Button
-import androidx.wear.compose.material3.ButtonDefaults
-import androidx.wear.compose.material3.EdgeButton
-import androidx.wear.compose.material3.ListHeader
-import androidx.wear.compose.material3.MaterialTheme
-import androidx.wear.compose.material3.ScreenScaffold
-import androidx.wear.compose.material3.SurfaceTransformation
-import androidx.wear.compose.material3.Text
-import androidx.wear.compose.material3.lazy.rememberTransformationSpec
-import androidx.wear.compose.material3.lazy.transformedHeight
-import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
-import androidx.wear.compose.ui.tooling.preview.WearPreviewFontScales
-import com.pmlp.wear.R
+import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pmlp.wear.presentation.theme.EdutaskTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            WearApp("Android")
-        }
-    }
-}
-
-@Composable
-fun WearApp(greetingName: String) {
-    EdutaskTheme {
-        AppScaffold {
-            val listState = rememberTransformingLazyColumnState()
-            val transformationSpec = rememberTransformationSpec()
-            ScreenScaffold(
-                scrollState = listState,
-                edgeButton = {
-                    EdgeButton(
-                        onClick = { /*TODO*/ },
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            ),
-                    ) {
-                        Text("More")
-                    }
-                },
-            ) { contentPadding -> // ScreenScaffold provides default padding; adjust as needed
-                TransformingLazyColumn(contentPadding = contentPadding, state = listState) {
-                    item {
-                        ListHeader(
-                            modifier =
-                                Modifier.fillMaxWidth().transformedHeight(this, transformationSpec),
-                            transformation = SurfaceTransformation(transformationSpec),
-                        ) {
-                            Text(text = stringResource(R.string.hello_world, greetingName))
-                        }
-                    }
-                    item {
-                        Button(
-                            onClick = { /*TODO*/ },
-                            modifier = Modifier.fillMaxWidth()
-                                .transformedHeight(this, transformationSpec),
-                            transformation = SurfaceTransformation(transformationSpec),
-                        ) {
-                            Text("Button A")
-                        }
-                    }
-                    item {
-                        Button(
-                            onClick = { /*TODO*/ },
-                            modifier = Modifier.fillMaxWidth()
-                                .transformedHeight(this, transformationSpec),
-                            transformation = SurfaceTransformation(transformationSpec),
-                        ) {
-                            Text("Button B")
-                        }
-                    }
-                    item {
-                        Button(
-                            onClick = { /*TODO*/ },
-                            modifier = Modifier.fillMaxWidth()
-                                .transformedHeight(this, transformationSpec),
-                            transformation = SurfaceTransformation(transformationSpec),
-                        ) {
-                            Text("Button C")
-                        }
-                    }
-
-                }
+            EdutaskTheme {
+                EduTaskWearApp()
             }
         }
     }
 }
 
-@WearPreviewDevices
-@WearPreviewFontScales
-@Composable
-fun DefaultPreview() {
-    WearApp("Preview Android")
+// ── Navegación simple entre pantallas ────────────────────────────────────────
+private sealed class WearDestino {
+    object Pendientes                          : WearDestino()
+    data class Calificar(val e: EvidenciaPendiente) : WearDestino()
 }
+
+@Composable
+fun EduTaskWearApp() {
+    val vm: CalificarViewModel = viewModel()
+    val uiState by vm.uiState.collectAsState()
+
+    var destino: WearDestino by remember { mutableStateOf(WearDestino.Pendientes) }
+
+    when (val dest = destino) {
+
+        // ── Lista de evidencias pendientes ────────────────────────────────
+        is WearDestino.Pendientes -> {
+            val items = when (val s = uiState) {
+                is CalificarUiState.ListaLista -> s.items
+                else                           -> emptyList()
+            }
+            val cargando = uiState is CalificarUiState.Cargando
+
+            PendientesScreen(
+                items         = items,
+                onSeleccionar = { evidencia -> destino = WearDestino.Calificar(evidencia) },
+                onRefrescar   = { vm.cargarPendientes() }
+            )
+        }
+
+        // ── Pantalla de calificación rápida ───────────────────────────────
+        is WearDestino.Calificar -> {
+            val cargando = uiState is CalificarUiState.Cargando
+
+            CalificarScreen(
+                evidencia   = dest.e,
+                esCargando  = cargando,
+                onCalificar = { nota ->
+                    vm.calificar(dest.e.id, nota) {
+                        // Tras guardar: volver a la lista actualizada
+                        vm.cargarPendientes()
+                        destino = WearDestino.Pendientes
+                    }
+                },
+                onVolver    = { destino = WearDestino.Pendientes }
+            )
+        }
+    }
+}
