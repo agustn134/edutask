@@ -28,6 +28,8 @@ import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pmlp.edutask.ui.EventosSharedViewModel
+import com.pmlp.edutask.ui.EventosUiState
 import java.text.SimpleDateFormat
 
 private data class NavItem(val label: String, val icon: ImageVector)
@@ -45,6 +47,7 @@ fun HomeAlumnoScreen(
     nombreAlumno: String = "Juan Ramirez",
     carrera: String      = "Ingenieria de Software",
     viewModel: HomeAlumnoViewModel = viewModel(),
+    eventosViewModel: EventosSharedViewModel = viewModel(),
     onVerTarea: (TareaItem) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
@@ -57,9 +60,11 @@ fun HomeAlumnoScreen(
     
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val eventosState by eventosViewModel.uiState.collectAsState()
 
     LaunchedEffect(idUsuario) {
         viewModel.fetchUserData(idUsuario)
+        eventosViewModel.fetchEventos()
     }
 
     val pendienteCount = if (uiState is HomeAlumnoState.Success) {
@@ -136,8 +141,13 @@ fun HomeAlumnoScreen(
                     val data = uiState as HomeAlumnoState.Success
                     val tareasFiltradas = if (claseSelected == null) data.tareas
                                           else data.tareas.filter { it.tarea.nombreClase == claseSelected }
+                    
+                    val eventos = if (eventosState is EventosUiState.Success) {
+                        (eventosState as EventosUiState.Success).eventos
+                    } else emptyList()
+                    
                     when (selectedNav) {
-                        0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
+                        0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
                             viewModel.unirseAClase(codigo, idUsuario)
                         }
                         1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
@@ -202,8 +212,13 @@ fun HomeAlumnoScreen(
                         val data = uiState as HomeAlumnoState.Success
                         val tareasFiltradas = if (claseSelected == null) data.tareas
                                               else data.tareas.filter { it.tarea.nombreClase == claseSelected }
+                        
+                        val eventos = if (eventosState is EventosUiState.Success) {
+                            (eventosState as EventosUiState.Success).eventos
+                        } else emptyList()
+                        
                         when (selectedNav) {
-                            0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
+                            0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
                                 viewModel.unirseAClase(codigo, idUsuario)
                             }
                             1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
