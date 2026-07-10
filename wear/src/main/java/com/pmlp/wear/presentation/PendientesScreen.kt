@@ -66,7 +66,7 @@ fun PendientesScreen(
                             contentAlignment    = Alignment.Center
                         ) {
                             Text(
-                                "✓ Todo calificado",
+                                "Todo calificado",
                                 style     = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center
                             )

@@ -78,7 +78,7 @@ fun CalificarScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 BotonNota(
-                                    label    = "10 ✓",
+                                    label    = "10",
                                     colors   = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.tertiary,
                                         contentColor   = MaterialTheme.colorScheme.onTertiary
@@ -87,7 +87,7 @@ fun CalificarScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 BotonNota(
-                                    label    = " 9 ★",
+                                    label    = "9",
                                     colors   = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.primary,
                                         contentColor   = MaterialTheme.colorScheme.onPrimary
@@ -101,7 +101,7 @@ fun CalificarScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 BotonNota(
-                                    label    = " 8 ◎",
+                                    label    = "8",
                                     colors   = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.secondary,
                                         contentColor   = MaterialTheme.colorScheme.onSecondary
@@ -110,7 +110,7 @@ fun CalificarScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 BotonNota(
-                                    label    = " 0 ✗",
+                                    label    = "0",
                                     colors   = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         contentColor   = MaterialTheme.colorScheme.onError
