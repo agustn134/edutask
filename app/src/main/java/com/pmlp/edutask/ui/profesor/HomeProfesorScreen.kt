@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -164,45 +167,80 @@ fun HomeProfesorScreen(
         onDispose { listener.remove() }
     }
 
-    // Listener en tiempo real conectado a Firestore
-    DisposableEffect(Unit) {
-        val listener = db.collection("evidencias_tarea")
-            .orderBy("fechaEnvio", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
+    val tareasIds = remember(listaTareas) { listaTareas.map { it.idTarea } }
+    var asignacionesIdsDelProfesor by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-                val evidenciasMapeadas = snapshot.documents.map { doc ->
-                    val estadoStr = doc.getString("estado") ?: "Pendiente"
-                    val estadoEnum = when (estadoStr.lowercase()) {
-                        "aprobada" -> EstadoEvidencia.Aprobada
-                        "rechazada" -> EstadoEvidencia.Rechazada
-                        else -> EstadoEvidencia.Pendiente
-                    }
-
-                    val idEvidenciaRaw = doc.get("idEvidencia")
-                    val idEvidenciaStr = when (idEvidenciaRaw) {
-                        is Number -> idEvidenciaRaw.toLong().toString()
-                        else -> idEvidenciaRaw?.toString() ?: doc.id
-                    }
-                    val idAsignacionRaw = doc.get("idAsignacion")
-                    val idAsignacionStr = when (idAsignacionRaw) {
-                        is Number -> idAsignacionRaw.toLong().toString()
-                        else -> idAsignacionRaw?.toString() ?: ""
-                    }
-                    EvidenciaTarea(
-                        idEvidencia = idEvidenciaStr,
-                        tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
-                        fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
-                        fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
-                        estado = estadoEnum,
-                        idAsignacion = idAsignacionStr,
-                        nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
-                    )
+    // Listener for assignments related to this professor's tasks
+    DisposableEffect(tareasIds) {
+        if (tareasIds.isEmpty()) {
+            asignacionesIdsDelProfesor = emptySet()
+            onDispose {}
+        } else {
+            val listener = db.collection("asignaciones_tarea")
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    val matchingIds = snapshot.documents
+                        .filter { doc ->
+                            val idTarea = doc.getString("idTarea") ?: ""
+                            idTarea in tareasIds
+                        }
+                        .map { it.id }
+                        .toSet()
+                    asignacionesIdsDelProfesor = matchingIds
                 }
-                listaEvidencias = evidenciasMapeadas
-            }
+            onDispose { listener.remove() }
+        }
+    }
 
-        onDispose { listener.remove() } // Limpia el listener cuando sales de la pantalla
+    // Listener for evidence submissions, filtered in memory by professor assignment IDs
+    DisposableEffect(asignacionesIdsDelProfesor) {
+        if (asignacionesIdsDelProfesor.isEmpty()) {
+            listaEvidencias = emptyList()
+            onDispose {}
+        } else {
+            val listener = db.collection("evidencias_tarea")
+                .orderBy("fechaEnvio", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+
+                    val evidenciasMapeadas = snapshot.documents
+                        .filter { doc ->
+                            val idAsignacion = doc.getString("idAsignacion") ?: ""
+                            idAsignacion in asignacionesIdsDelProfesor
+                        }
+                        .map { doc ->
+                            val estadoStr = doc.getString("estado") ?: "Pendiente"
+                            val estadoEnum = when (estadoStr.lowercase()) {
+                                "aprobada" -> EstadoEvidencia.Aprobada
+                                "rechazada" -> EstadoEvidencia.Rechazada
+                                else -> EstadoEvidencia.Pendiente
+                            }
+
+                            val idEvidenciaRaw = doc.get("idEvidencia")
+                            val idEvidenciaStr = when (idEvidenciaRaw) {
+                                is Number -> idEvidenciaRaw.toLong().toString()
+                                else -> idEvidenciaRaw?.toString() ?: doc.id
+                            }
+                            val idAsignacionRaw = doc.get("idAsignacion")
+                            val idAsignacionStr = when (idAsignacionRaw) {
+                                is Number -> idAsignacionRaw.toLong().toString()
+                                else -> idAsignacionRaw?.toString() ?: ""
+                            }
+                            EvidenciaTarea(
+                                idEvidencia = idEvidenciaStr,
+                                tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
+                                fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
+                                fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
+                                estado = estadoEnum,
+                                idAsignacion = idAsignacionStr,
+                                nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
+                            )
+                        }
+                    listaEvidencias = evidenciasMapeadas
+                }
+
+            onDispose { listener.remove() }
+        }
     }
 
     val pendientes = listaEvidencias.count { it.estado == EstadoEvidencia.Pendiente }
@@ -401,7 +439,13 @@ fun HomeProfesorScreen(
                     },
                     onVerAlumnos = onVerAlumnos
                 )
-                3 -> PerfilContent(nombreProfesor)
+                3 -> PerfilContent(
+                    nombre = nombreProfesor,
+                    clasesCount = listaClases.size,
+                    tareasCount = listaTareas.size,
+                    evaluacionesCount = listaEvidencias.count { it.estado != EstadoEvidencia.Pendiente },
+                    onLogout = onLogout
+                )
             }
         }
     }
@@ -756,10 +800,310 @@ private fun ClasesContent(
 }
 
 @Composable
-private fun PerfilContent(nombre: String) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text(nombre, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Rol: Docente / Coordinador", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun PerfilContent(
+    nombre: String,
+    clasesCount: Int,
+    tareasCount: Int,
+    evaluacionesCount: Int,
+    onLogout: () -> Unit
+) {
+    var darkMode by remember { mutableStateOf(false) }
+    var notificationsEnabled by remember { mutableStateOf(true) }
+    var autoSyncEnabled by remember { mutableStateOf(true) }
+
+    val initials = remember(nombre) {
+        nombre.split(" ")
+            .filter { it.length > 2 }
+            .take(2)
+            .joinToString("") { it.first().toString().uppercase() }
+            .ifBlank { "P" }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Avatar & Identification Header
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(100.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+        ) {
+            Text(
+                text = initials,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+
+        Text(
+            text = nombre,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = "Docente Académico • EduTask",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Quick Stats row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Clases count
+            ElevatedCard(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = clasesCount.toString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Asignaturas",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Tareas count
+            ElevatedCard(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = tareasCount.toString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Text(
+                        text = "Tareas",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Evaluaciones count
+            ElevatedCard(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = evaluacionesCount.toString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                    Text(
+                        text = "Evaluadas",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Professional Info Card
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Información Profesional",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.School,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Institución",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Colegio de Bachilleres EduTask",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Badge,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "ID Empleado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "EMP-9823",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Correo Institucional",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "docente.edutask@colegio.edu.mx",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+        }
+
+        // App Preferences Switches Card
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Configuración",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(bottom = 4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.secondary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Notificaciones de entrega", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Switch(
+                        checked = notificationsEnabled,
+                        onCheckedChange = { notificationsEnabled = it }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Sync, null, tint = MaterialTheme.colorScheme.secondary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Sincronización en la nube", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Switch(
+                        checked = autoSyncEnabled,
+                        onCheckedChange = { autoSyncEnabled = it }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DarkMode, null, tint = MaterialTheme.colorScheme.secondary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Tema oscuro (Vista previa)", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Switch(
+                        checked = darkMode,
+                        onCheckedChange = { darkMode = it }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Logout Button
+        Button(
+            onClick = onLogout,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Logout, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Cerrar Sesión", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
