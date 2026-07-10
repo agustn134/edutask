@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.io.ByteArrayOutputStream
 
 // ── Estados de la UI ────────────────────────────────────────────────────────
@@ -43,8 +45,16 @@ class EnviarEvidenciaViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = EnviarEvidenciaUiState.Uploading
             try {
-                // 1. Convertir bitmap → Base64 con compresión JPEG al 50%
-                val fotoBase64 = bitmapToBase64(bitmap)
+                // 1. Convertir bitmap → Base64 en hilo de IO (no bloquea la UI)
+                val fotoBase64 = withContext(Dispatchers.IO) { bitmapToBase64(bitmap) }
+
+                // 2. Verificar que el tamaño no exceda el límite de Firestore (1 MiB)
+                if (fotoBase64.length > 900_000) {
+                    _uiState.value = EnviarEvidenciaUiState.Error(
+                        "La imagen es demasiado grande. Intenta con una foto de menor resolución."
+                    )
+                    return@launch
+                }
 
                 // 2. Guardar en Firestore colección "evidencias_tarea"
                 val evidenciaData = hashMapOf(
@@ -75,12 +85,23 @@ class EnviarEvidenciaViewModel : ViewModel() {
         _uiState.value = EnviarEvidenciaUiState.Idle
     }
 
-    // ── Helper privado: Bitmap → Base64 String ───────────────────────────────
+    // ── Helper privado: Bitmap → Base64 String (máx. 800×800, 60% JPEG) ──────
     private fun bitmapToBase64(bitmap: Bitmap): String {
+        // Escalar si la imagen supera 800x800 para asegurar que quepa en Firestore
+        val scaled = if (bitmap.width > 800 || bitmap.height > 800) {
+            val ratio = minOf(800f / bitmap.width, 800f / bitmap.height)
+            Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * ratio).toInt(),
+                (bitmap.height * ratio).toInt(),
+                true
+            )
+        } else bitmap
+
         val outputStream = ByteArrayOutputStream()
-        // Compresión al 50% para mantenerse dentro del límite de 1 MiB de Firestore
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
-        val byteArray = outputStream.toByteArray()
-        return Base64.encodeToString(byteArray, Base64.DEFAULT)
+        // 60% calidad JPEG: buen equilibrio entre nitidez y tamaño (<800KB Base64)
+        scaled.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+        if (scaled != bitmap) scaled.recycle() // liberar memoria del Bitmap escalado
+        return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 }
