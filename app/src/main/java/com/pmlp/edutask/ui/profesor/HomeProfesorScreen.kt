@@ -25,8 +25,14 @@ import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.EvidenciaTarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pmlp.edutask.ui.EventosSharedViewModel
+import com.pmlp.edutask.ui.EventosUiState
+import com.pmlp.edutask.model.Evento
+import androidx.compose.foundation.lazy.LazyRow
 import java.util.Date
 import java.text.SimpleDateFormat
+import java.util.Locale
 
 private val EVIDENCIAS = listOf(
     EvidenciaTarea("1", "Evidencia Act. 3 PMLP", "", Date(System.currentTimeMillis() - 2 * 3600000),  EstadoEvidencia.Pendiente, "1", "Juan Ramirez"),
@@ -57,6 +63,7 @@ fun HomeProfesorScreen(
     idUsuario: String        = "",
     nombreProfesor: String   = "Mtro. Perez",
     claseActual: String      = "Programacion Movil PMLP",
+    eventosViewModel: EventosSharedViewModel = viewModel(),
     onCrearTarea: () -> Unit = {},
     onLogout: () -> Unit     = {}
 ) {
@@ -71,6 +78,12 @@ fun HomeProfesorScreen(
     val pendientes    = EVIDENCIAS.count { it.estado == EstadoEvidencia.Pendiente }
     val initials      = nombreProfesor.split(" ").filter { it.length > 2 }.take(2)
         .joinToString("") { it.first().toString().uppercase() }.ifBlank { "P" }
+
+    val eventosState by eventosViewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        eventosViewModel.fetchEventos()
+    }
 
     // Diálogo para Crear Clase Nueva
     if (showClassDialog) {
@@ -180,8 +193,12 @@ fun HomeProfesorScreen(
         }
     ) { pad ->
         Box(modifier = Modifier.padding(pad).fillMaxSize()) {
+            val eventos = if (eventosState is EventosUiState.Success) {
+                (eventosState as EventosUiState.Success).eventos
+            } else emptyList()
+
             when (selectedNav) {
-                0 -> InicioContent(pendientes, claseActual, onCrearTarea)
+                0 -> InicioContent(pendientes, claseActual, eventos, onCrearTarea)
                 1 -> TareasContent(claseActual)
                 2 -> ClasesContent()
                 3 -> PerfilContent(nombreProfesor)
@@ -191,10 +208,26 @@ fun HomeProfesorScreen(
 }
 
 @Composable
-private fun InicioContent(pendientes: Int, claseActual: String, onCrearTarea: () -> Unit) {
+private fun InicioContent(pendientes: Int, claseActual: String, eventos: List<Evento>, onCrearTarea: () -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        
+        if (eventos.isNotEmpty()) {
+            item {
+                Text("Anuncios Recientes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(eventos) { evento ->
+                        EventoCarouselCardProfesor(evento)
+                    }
+                }
+            }
+        }
+        
         item {
             ElevatedCard(modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
@@ -307,6 +340,24 @@ private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier
                 }
             }
             Text(acceso.label, style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+
+@Composable
+fun EventoCarouselCardProfesor(evento: Evento) {
+    val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
+    val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
+
+    OutlinedCard(
+        modifier = Modifier.width(260.dp).height(120.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(evento.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
+            Text(evento.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

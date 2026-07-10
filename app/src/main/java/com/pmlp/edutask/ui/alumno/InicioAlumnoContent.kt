@@ -13,6 +13,12 @@ import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.pmlp.edutask.model.Evento
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.text.style.TextOverflow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,6 +26,7 @@ fun InicioContent(
     modifier: Modifier = Modifier, 
     pendientes: Int, 
     tareas: List<TareaItem>,
+    eventos: List<Evento> = emptyList(),
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onVerTarea: (TareaItem) -> Unit,
@@ -35,6 +42,22 @@ fun InicioContent(
         LazyColumn(modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        
+        if (eventos.isNotEmpty()) {
+            item {
+                Text("Anuncios Recientes", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp)
+                ) {
+                    items(eventos) { evento ->
+                        EventoCarouselCard(evento)
+                    }
+                }
+            }
+        }
+        
         item {
             ElevatedCard(modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
@@ -98,5 +121,23 @@ fun InicioContent(
         }
         item { Spacer(Modifier.height(72.dp)) }
     }
+    }
+}
+
+@Composable
+fun EventoCarouselCard(evento: Evento) {
+    val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
+    val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
+
+    OutlinedCard(
+        modifier = Modifier.width(260.dp).height(120.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(evento.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(4.dp))
+            Text(evento.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
