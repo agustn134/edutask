@@ -52,8 +52,17 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    
+    // Wear OS Compose Fundamental
+    implementation("androidx.wear.compose:compose-material3:1.0.0-alpha23")
+    implementation("androidx.wear.compose:compose-foundation:1.3.1")
+
+    // Firebase para Wear OS
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Carga de Imágenes desde la nube
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }

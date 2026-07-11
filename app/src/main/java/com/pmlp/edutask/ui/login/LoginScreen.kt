@@ -34,6 +34,9 @@ import com.pmlp.edutask.ui.theme.EduTaskTheme
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.google.android.gms.wearable.PutDataMapRequest
+import com.google.android.gms.wearable.Wearable
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -91,6 +94,23 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
 
                 val idUsuario = doc.id
                 val nombre    = doc.getString("nombre") ?: matricula
+
+                // Sync session to wear device on successful login
+                if (rol == RolUsuario.Profesor) {
+                    try {
+                        val dataClient = Wearable.getDataClient(context)
+                        val putDataReq = PutDataMapRequest.create("/usuario_logueado").run {
+                            dataMap.putString("idUsuario", idUsuario)
+                            dataMap.putString("nombre", nombre)
+                            asPutDataRequest()
+                        }
+                        dataClient.putDataItem(putDataReq)
+                            .addOnSuccessListener { Log.d("WearSync", "Session synced successfully: $idUsuario") }
+                            .addOnFailureListener { Log.e("WearSync", "Failed to sync session with Wear OS", it) }
+                    } catch (e: Exception) {
+                        Log.e("WearSync", "Wearable API error", e)
+                    }
+                }
 
                 isLoading = false
                 onLoginSuccess(idUsuario, nombre, rol)

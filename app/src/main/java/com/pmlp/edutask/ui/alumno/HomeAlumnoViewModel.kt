@@ -154,7 +154,11 @@ class HomeAlumnoViewModel : ViewModel() {
                                     if (evSnapshot != null && !evSnapshot.isEmpty) {
                                         val evidenciaDoc = evSnapshot.documents[0]
                                         val estadoStr = evidenciaDoc.getString("estado")
-                                        val idEvidencia = evidenciaDoc.id
+                                        val idEvidenciaRaw = evidenciaDoc.get("idEvidencia")
+                                        val idEvidencia = when (idEvidenciaRaw) {
+                                            is Number -> idEvidenciaRaw.toLong().toString()
+                                            else -> idEvidenciaRaw?.toString() ?: evidenciaDoc.id
+                                        }
                                         
                                         val estadoEvidencia = when (estadoStr) {
                                             "Aprobada" -> EstadoEvidencia.Aprobada
@@ -171,8 +175,21 @@ class HomeAlumnoViewModel : ViewModel() {
                                                     var calificacion: Int? = null
                                                     var comentario: String? = null
                                                     if (!califSnapshot.isEmpty) {
-                                                        calificacion = califSnapshot.documents[0].getLong("valor")?.toInt()
+                                                        val valorRaw = califSnapshot.documents[0].get("valor")
+                                                        calificacion = when (valorRaw) {
+                                                            is Number -> valorRaw.toInt()
+                                                            is String -> valorRaw.toIntOrNull()
+                                                            else -> null
+                                                        }
                                                         comentario = califSnapshot.documents[0].getString("comentario")
+                                                    }
+                                                    if (calificacion == null) {
+                                                        val califRaw = evidenciaDoc.get("calificacion")
+                                                        calificacion = when (califRaw) {
+                                                            is Number -> califRaw.toInt()
+                                                            is String -> califRaw.toIntOrNull()
+                                                            else -> null
+                                                        }
                                                     }
                                                     
                                                     paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario)
