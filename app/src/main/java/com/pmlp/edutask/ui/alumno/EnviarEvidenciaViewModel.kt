@@ -23,12 +23,66 @@ sealed class EnviarEvidenciaUiState {
     data class Error(val mensaje: String) : EnviarEvidenciaUiState()
 }
 
+data class EvidenciaEnviadaData(
+    val idEvidencia: String,
+    val estado: String,
+    val nombreArchivo: String?,
+    val textoEvidencia: String?,
+    val fotoBase64: String?
+)
+
 class EnviarEvidenciaViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow<EnviarEvidenciaUiState>(EnviarEvidenciaUiState.Idle)
     val uiState: StateFlow<EnviarEvidenciaUiState> = _uiState.asStateFlow()
 
+    private val _evidenciaEnviada = MutableStateFlow<EvidenciaEnviadaData?>(null)
+    val evidenciaEnviada: StateFlow<EvidenciaEnviadaData?> = _evidenciaEnviada.asStateFlow()
+
+    private val _isLoadingEvidencia = MutableStateFlow(false)
+    val isLoadingEvidencia: StateFlow<Boolean> = _isLoadingEvidencia.asStateFlow()
+
     private val db = FirebaseFirestore.getInstance()
+
+    fun cargarEvidenciaEnviada(idEvidencia: String) {
+        if (idEvidencia.isBlank()) return
+        viewModelScope.launch {
+            _isLoadingEvidencia.value = true
+            try {
+                val doc = db.collection("evidencias_tarea").document(idEvidencia).get().await()
+                if (doc.exists()) {
+                    _evidenciaEnviada.value = EvidenciaEnviadaData(
+                        idEvidencia = doc.id,
+                        estado = doc.getString("estado") ?: "Pendiente",
+                        nombreArchivo = doc.getString("nombreArchivo"),
+                        textoEvidencia = doc.getString("textoEvidencia"),
+                        fotoBase64 = doc.getString("fotoBase64")
+                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isLoadingEvidencia.value = false
+            }
+        }
+    }
+
+    fun anularEvidencia(idEvidencia: String, onSuccess: () -> Unit) {
+        if (idEvidencia.isBlank()) return
+        viewModelScope.launch {
+            _isLoadingEvidencia.value = true
+            try {
+                db.collection("evidencias_tarea").document(idEvidencia).delete().await()
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                _uiState.value = EnviarEvidenciaUiState.Error("Error al anular la entrega: ${e.message}")
+            } finally {
+                _isLoadingEvidencia.value = false
+            }
+        }
+    }
 
     // ── Enviar evidencia ─────────────────────────────────────────────────────
     fun enviarEvidencia(
