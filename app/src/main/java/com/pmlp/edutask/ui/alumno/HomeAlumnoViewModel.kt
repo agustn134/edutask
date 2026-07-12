@@ -39,6 +39,9 @@ class HomeAlumnoViewModel : ViewModel() {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val _correo = MutableStateFlow("")
+    val correo: StateFlow<String> = _correo.asStateFlow()
+
     private val db = FirebaseFirestore.getInstance()
 
     private var asignacionesListener: com.google.firebase.firestore.ListenerRegistration? = null
@@ -68,6 +71,10 @@ class HomeAlumnoViewModel : ViewModel() {
         evidenciasListeners.forEach { it.remove() }
         evidenciasListeners.clear()
 
+        db.collection("usuarios").document(idUsuario).get().addOnSuccessListener { doc ->
+            _correo.value = doc.getString("correo") ?: ""
+        }
+
         _uiState.value = HomeAlumnoState.Loading
         loadData(idUsuario)
     }
@@ -80,6 +87,21 @@ class HomeAlumnoViewModel : ViewModel() {
             loadData(idUsuario)
             _isRefreshing.value = false
         }
+    }
+
+    fun updateAccount(idUsuario: String, nuevoCorreo: String, nuevaContrasena: String, onComplete: (Boolean) -> Unit) {
+        val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
+        if (nuevaContrasena.isNotBlank()) {
+            updates["contrasena"] = nuevaContrasena
+        }
+        db.collection("usuarios").document(idUsuario).update(updates)
+            .addOnSuccessListener {
+                _correo.value = nuevoCorreo
+                onComplete(true)
+            }
+            .addOnFailureListener {
+                onComplete(false)
+            }
     }
 
     private fun loadData(idUsuario: String) {

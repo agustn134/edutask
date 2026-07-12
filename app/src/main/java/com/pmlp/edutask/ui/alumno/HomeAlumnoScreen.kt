@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -37,7 +38,7 @@ import java.text.SimpleDateFormat
 private data class NavItem(val label: String, val icon: ImageVector)
 private val NAV_ITEMS = listOf(
     NavItem("Inicio",         Icons.Default.Home),
-    NavItem("Tareas",         Icons.Default.Assignment),
+    NavItem("Tareas",         Icons.AutoMirrored.Filled.Assignment),
     NavItem("Calificaciones", Icons.Default.Grade),
     NavItem("Perfil",         Icons.Default.Person)
 )
@@ -62,6 +63,7 @@ fun HomeAlumnoScreen(
     
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val correoAlumno by viewModel.correo.collectAsState()
     val eventosState by eventosViewModel.uiState.collectAsState()
 
     LaunchedEffect(idUsuario) {
@@ -69,8 +71,9 @@ fun HomeAlumnoScreen(
         eventosViewModel.fetchEventos()
     }
 
+    val now = java.util.Date()
     val pendienteCount = if (uiState is HomeAlumnoState.Success) {
-        (uiState as HomeAlumnoState.Success).tareas.count { it.estado == EstadoEvidencia.Pendiente }
+        (uiState as HomeAlumnoState.Success).tareas.count { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }
     } else 0
 
     val initials = nombreAlumno.split(" ").take(2).joinToString("") { it.first().toString().uppercase() }
@@ -80,9 +83,9 @@ fun HomeAlumnoScreen(
             containerColor = MaterialTheme.colorScheme.background,
             contentColor   = MaterialTheme.colorScheme.onBackground,
             topBar = {
-                MediumTopAppBar(
+                TopAppBar(
                     navigationIcon = {
-                        Surface(Modifier.padding(start = 12.dp).size(40.dp),
+                        Surface(Modifier.padding(start = 12.dp, end = 12.dp).size(40.dp),
                                 shape = MaterialTheme.shapes.extraLarge,
                                 color = MaterialTheme.colorScheme.primaryContainer) {
                             Box(contentAlignment = Alignment.Center) {
@@ -93,7 +96,7 @@ fun HomeAlumnoScreen(
                     },
                     title = {
                         Column {
-                            Text("Hola, ${nombreAlumno.substringBefore(" ")}!", style = MaterialTheme.typography.titleLarge,
+                            Text("Hola, ${nombreAlumno.substringBefore(" ")}!", style = MaterialTheme.typography.titleMedium,
                                  maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(carrera, style = MaterialTheme.typography.bodySmall,
                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -101,10 +104,10 @@ fun HomeAlumnoScreen(
                     },
                     actions = {
                         IconButton(onClick = onLogout) {
-                            Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
+                            Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar sesión")
                         }
                     },
-                    colors = TopAppBarDefaults.mediumTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
@@ -156,7 +159,15 @@ fun HomeAlumnoScreen(
                             1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
                                           tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
                             2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
+                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas, correoAlumno) { nuevoCorreo, nuevaContrasena ->
+                                viewModel.updateAccount(idUsuario, nuevoCorreo, nuevaContrasena) { success ->
+                                    if (success) {
+                                        android.widget.Toast.makeText(context, "Cuenta actualizada", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Error al actualizar", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -184,18 +195,18 @@ fun HomeAlumnoScreen(
             }
             Scaffold(Modifier.weight(1f), containerColor = MaterialTheme.colorScheme.background,
                      topBar = {
-                         LargeTopAppBar(
+                         TopAppBar(
                              title = {
                                  Column {
-                                     Text("Hola, $nombreAlumno!", style = MaterialTheme.typography.headlineMedium)
+                                     Text("Hola, $nombreAlumno!", style = MaterialTheme.typography.titleLarge)
                                      Text(carrera, style = MaterialTheme.typography.bodyMedium,
                                           color = MaterialTheme.colorScheme.onSurfaceVariant)
                                  }
                              },
                              actions = {
-                                 IconButton(onClick = onLogout) { Icon(Icons.Default.ExitToApp, "Cerrar sesión") }
+                                 IconButton(onClick = onLogout) { Icon(Icons.AutoMirrored.Filled.ExitToApp, "Cerrar sesión") }
                              },
-                             colors = TopAppBarDefaults.largeTopAppBarColors(
+                             colors = TopAppBarDefaults.topAppBarColors(
                                  containerColor = MaterialTheme.colorScheme.surface,
                                  scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                              )
@@ -229,7 +240,15 @@ fun HomeAlumnoScreen(
                                 1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
                                               tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
                                 2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                                3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
+                                3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas, correoAlumno) { nuevoCorreo, nuevaContrasena ->
+                                    viewModel.updateAccount(idUsuario, nuevoCorreo, nuevaContrasena) { success ->
+                                        if (success) {
+                                            android.widget.Toast.makeText(context, "Cuenta actualizada", android.widget.Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Error al actualizar", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
