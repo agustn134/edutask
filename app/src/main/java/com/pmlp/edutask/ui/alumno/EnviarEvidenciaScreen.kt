@@ -48,6 +48,7 @@ import android.Manifest
 import android.os.Build
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import android.provider.OpenableColumns
 
 // ── Pantalla principal ───────────────────────────────────────────────────────
 
@@ -66,8 +67,23 @@ fun EnviarEvidenciaScreen(
     // Bitmap de la foto capturada (null = sin foto aún)
     var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
+    // Archivo genérico adjunto (para documentos no-imagen)
+    var archivoUri by remember { mutableStateOf<Uri?>(null) }
+    var nombreArchivo by remember { mutableStateOf<String?>(null) }
+    var textoEvidencia by remember { mutableStateOf("") }
+
     // URI temporal para escribir la foto de la cámara
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
+    
+    val getFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            archivoUri = uri
+            fotoBitmap = null // limpiar foto si seleccionan archivo
+            nombreArchivo = getFileName(context, uri)
+        }
+    }
     
     // ── Launcher para la galería (con fallback para compatibilidad) ─────────────
     // PickVisualMedia es el selector moderno (Android 11+). En dispositivos que
@@ -75,13 +91,21 @@ fun EnviarEvidenciaScreen(
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
-        uri?.let { fotoBitmap = decodeUriToSafeBitmap(context, it) }
+        uri?.let { 
+            fotoBitmap = decodeUriToSafeBitmap(context, it) 
+            archivoUri = null
+            nombreArchivo = getFileName(context, it)
+        }
     }
 
     val getContentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let { fotoBitmap = decodeUriToSafeBitmap(context, it) }
+        uri?.let { 
+            fotoBitmap = decodeUriToSafeBitmap(context, it) 
+            archivoUri = null
+            nombreArchivo = getFileName(context, it)
+        }
     }
 
     // ── Dialogo de éxito ─────────────────────────────────────────────────────
@@ -121,6 +145,8 @@ fun EnviarEvidenciaScreen(
         if (success) {
             fotoUri?.let { uri ->
                 fotoBitmap = decodeUriToSafeBitmap(context, uri)
+                archivoUri = null
+                nombreArchivo = "foto_camara.jpg"
             }
         }
     }
@@ -259,21 +285,44 @@ fun EnviarEvidenciaScreen(
                         }
                     }
 
+                    // Botón Archivo (nuevo)
+                    OutlinedButton(
+                        onClick = { getFileLauncher.launch(arrayOf("*/*")) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape    = RoundedCornerShape(12.dp),
+                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Adjuntar Documento")
+                    }
+
                     // Botón Enviar Evidencia
                     Button(
                         onClick = {
-                            fotoBitmap?.let { bmp ->
-                                viewModel.enviarEvidencia(
-                                    idAsignacion = idAsignacion,
-                                    nombreAlumno = nombreAlumno,
-                                    tituloTarea  = tarea.titulo,
-                                    bitmap       = bmp
-                                )
+                            var bytes: ByteArray? = null
+                            archivoUri?.let { uri ->
+                                try {
+                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                        bytes = input.readBytes()
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
                             }
+                            viewModel.enviarEvidencia(
+                                idAsignacion = idAsignacion,
+                                nombreAlumno = nombreAlumno,
+                                tituloTarea  = tarea.titulo,
+                                archivoBytes = bytes,
+                                nombreArchivo = nombreArchivo,
+                                textoEvidencia = textoEvidencia,
+                                bitmap       = fotoBitmap
+                            )
                         },
                         modifier  = Modifier.fillMaxWidth(),
                         shape     = RoundedCornerShape(12.dp),
-                        enabled   = fotoBitmap != null && uiState !is EnviarEvidenciaUiState.Uploading,
+                        enabled   = (fotoBitmap != null || archivoUri != null || textoEvidencia.isNotBlank()) && uiState !is EnviarEvidenciaUiState.Uploading,
                         colors    = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
@@ -404,9 +453,19 @@ fun EnviarEvidenciaScreen(
                 }
             }
 
-            // ── Zona de previsualización de la foto ───────────────────────
+            // ── Zona de texto de evidencia ─────────────────────────────────────
+            OutlinedTextField(
+                value = textoEvidencia,
+                onValueChange = { textoEvidencia = it },
+                label = { Text("Texto o Enlace (Opcional)") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                maxLines = 5
+            )
+
+            // ── Zona de previsualización del archivo ───────────────────────
             Text(
-                "Fotografía de la Evidencia",
+                "Archivos Adjuntos",
                 style      = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
@@ -429,9 +488,9 @@ fun EnviarEvidenciaScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Placeholder — visible cuando no hay foto
+                    // Placeholder — visible cuando no hay foto ni archivo
                     AnimatedVisibility(
-                        visible = fotoBitmap == null,
+                        visible = fotoBitmap == null && archivoUri == null,
                         enter   = fadeIn(),
                         exit    = fadeOut()
                     ) {
@@ -454,10 +513,36 @@ fun EnviarEvidenciaScreen(
                                 }
                             }
                             Text(
-                                "Toca el botón para\nfotografiar tu libreta",
+                                "Toca los botones para adjuntar\ntu evidencia",
                                 style     = MaterialTheme.typography.bodyMedium,
                                 color     = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+
+                    // Documento genérico — visible cuando hay archivo pero no foto
+                    AnimatedVisibility(
+                        visible = archivoUri != null && fotoBitmap == null,
+                        enter   = fadeIn() + scaleIn(initialScale = 0.92f),
+                        exit    = fadeOut()
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.InsertDriveFile,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                nombreArchivo ?: "Archivo seleccionado",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
@@ -500,8 +585,8 @@ fun EnviarEvidenciaScreen(
                         tint     = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Text(
-                        "Asegúrate de que la foto sea clara y legible. " +
-                        "Una vez enviada, el profesor revisará tu entrega.",
+                        "Asegúrate de que los archivos o el enlace " +
+                        "sean correctos antes de enviar.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -559,6 +644,32 @@ private fun decodeUriToSafeBitmap(context: Context, uri: Uri): Bitmap? {
         e.printStackTrace()
         null
     }
+}
+
+// ── Helper: Obtener nombre de archivo de la URI ──────────────────────────────
+private fun getFileName(context: Context, uri: Uri): String {
+    var result: String? = null
+    if (uri.scheme == "content") {
+        val cursor = context.contentResolver.query(uri, null, null, null, null)
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index != -1) {
+                    result = cursor.getString(index)
+                }
+            }
+        } finally {
+            cursor?.close()
+        }
+    }
+    if (result == null) {
+        result = uri.path
+        val cut = result?.lastIndexOf('/') ?: -1
+        if (cut != -1) {
+            result = result?.substring(cut + 1)
+        }
+    }
+    return result ?: "archivo"
 }
 
 // ── Preview ──────────────────────────────────────────────────────────────────
