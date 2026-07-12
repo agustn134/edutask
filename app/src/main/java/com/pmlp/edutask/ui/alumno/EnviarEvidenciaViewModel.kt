@@ -35,36 +35,58 @@ class EnviarEvidenciaViewModel : ViewModel() {
         idAsignacion: String,
         nombreAlumno: String,
         tituloTarea:  String,
-        bitmap:       Bitmap
+        archivoBytes: ByteArray? = null,
+        nombreArchivo: String? = null,
+        textoEvidencia: String = "",
+        bitmap: Bitmap? = null
     ) {
         if (idAsignacion.isBlank()) {
             _uiState.value = EnviarEvidenciaUiState.Error("ID de asignación inválido.")
             return
         }
 
+        if (textoEvidencia.isBlank() && archivoBytes == null && bitmap == null) {
+            _uiState.value = EnviarEvidenciaUiState.Error("Debes enviar un texto, enlace o un archivo adjunto.")
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = EnviarEvidenciaUiState.Uploading
             try {
-                // 1. Convertir bitmap → Base64 en hilo de IO (no bloquea la UI)
-                val fotoBase64 = withContext(Dispatchers.IO) { bitmapToBase64(bitmap) }
+                var finalBase64: String? = null
 
-                // 2. Verificar que el tamaño no exceda el límite de Firestore (1 MiB)
-                if (fotoBase64.length > 900_000) {
+                if (bitmap != null) {
+                    finalBase64 = withContext(Dispatchers.IO) { bitmapToBase64(bitmap) }
+                } else if (archivoBytes != null) {
+                    finalBase64 = withContext(Dispatchers.IO) { bytesToBase64(archivoBytes) }
+                }
+
+                // Verificar que el tamaño no exceda el límite seguro para Firestore (~900KB en Base64)
+                if (finalBase64 != null && finalBase64.length > 900_000) {
                     _uiState.value = EnviarEvidenciaUiState.Error(
-                        "La imagen es demasiado grande. Intenta con una foto de menor resolución."
+                        "El archivo es demasiado grande. Intenta con un archivo más pequeño."
                     )
                     return@launch
                 }
 
-                // 2. Guardar en Firestore colección "evidencias_tarea"
-                val evidenciaData = hashMapOf(
+                // Guardar en Firestore colección "evidencias_tarea"
+                val evidenciaData = hashMapOf<String, Any>(
                     "idAsignacion" to idAsignacion,
                     "tituloTarea"  to tituloTarea,
                     "nombreAlumno" to nombreAlumno,
                     "fechaEnvio"   to FieldValue.serverTimestamp(),
-                    "estado"       to "Pendiente",
-                    "fotoBase64"   to fotoBase64
+                    "estado"       to "Pendiente"
                 )
+
+                if (finalBase64 != null) {
+                    // Usamos "fotoBase64" por retrocompatibilidad con la pantalla del profesor
+                    evidenciaData["fotoBase64"] = finalBase64
+                    evidenciaData["nombreArchivo"] = nombreArchivo ?: "evidencia"
+                }
+
+                if (textoEvidencia.isNotBlank()) {
+                    evidenciaData["textoEvidencia"] = textoEvidencia
+                }
 
                 db.collection("evidencias_tarea")
                     .add(evidenciaData)
@@ -87,7 +109,6 @@ class EnviarEvidenciaViewModel : ViewModel() {
 
     // ── Helper privado: Bitmap → Base64 String (máx. 800×800, 60% JPEG) ──────
     private fun bitmapToBase64(bitmap: Bitmap): String {
-        // Escalar si la imagen supera 800x800 para asegurar que quepa en Firestore
         val scaled = if (bitmap.width > 800 || bitmap.height > 800) {
             val ratio = minOf(800f / bitmap.width, 800f / bitmap.height)
             Bitmap.createScaledBitmap(
@@ -99,9 +120,13 @@ class EnviarEvidenciaViewModel : ViewModel() {
         } else bitmap
 
         val outputStream = ByteArrayOutputStream()
-        // 60% calidad JPEG: buen equilibrio entre nitidez y tamaño (<800KB Base64)
         scaled.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
-        if (scaled != bitmap) scaled.recycle() // liberar memoria del Bitmap escalado
+        if (scaled != bitmap) scaled.recycle() 
         return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+    }
+
+    // ── Helper privado: ByteArray → Base64 String ────────────────────────────
+    private fun bytesToBase64(bytes: ByteArray): String {
+        return Base64.encodeToString(bytes, Base64.NO_WRAP)
     }
 }
