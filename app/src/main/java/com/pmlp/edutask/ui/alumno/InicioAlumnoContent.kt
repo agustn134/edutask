@@ -51,7 +51,7 @@ fun InicioContent(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
-                    items(eventos) { evento ->
+                    items(eventos, key = { it.idEvento }) { evento ->
                         EventoCarouselCard(evento)
                     }
                 }
@@ -117,7 +117,7 @@ fun InicioContent(
                 Text("No hay tareas próximas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            items(proximasTareas) { item -> TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) }
+            items(proximasTareas, key = { it.idAsignacion }) { item -> TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) }
         }
         item { Spacer(Modifier.height(72.dp)) }
     }

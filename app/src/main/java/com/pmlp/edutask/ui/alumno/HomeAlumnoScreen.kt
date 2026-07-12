@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -55,8 +57,8 @@ fun HomeAlumnoScreen(
     val winSize    = calculateWindowSizeClass(activity = context as Activity)
     val isCompact  = winSize.widthSizeClass == WindowWidthSizeClass.Compact
 
-    var selectedNav       by remember { mutableIntStateOf(0) }
-    var claseSelected     by remember { mutableStateOf<String?>(null) }
+    var selectedNav       by rememberSaveable { mutableIntStateOf(0) }
+    var claseSelected     by rememberSaveable { mutableStateOf<String?>(null) }
     
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -146,14 +148,16 @@ fun HomeAlumnoScreen(
                         (eventosState as EventosUiState.Success).eventos
                     } else emptyList()
                     
-                    when (selectedNav) {
-                        0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
-                            viewModel.unirseAClase(codigo, idUsuario)
+                    Crossfade(targetState = selectedNav, label = "TabSwitch") { nav ->
+                        when (nav) {
+                            0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
+                                viewModel.unirseAClase(codigo, idUsuario)
+                            }
+                            1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
+                                          tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
                         }
-                        1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
-                                      tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                        2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                        3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
                     }
                 }
             }
@@ -217,14 +221,16 @@ fun HomeAlumnoScreen(
                             (eventosState as EventosUiState.Success).eventos
                         } else emptyList()
                         
-                        when (selectedNav) {
-                            0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
-                                viewModel.unirseAClase(codigo, idUsuario)
+                        Crossfade(targetState = selectedNav, label = "TabSwitchTablet") { nav ->
+                            when (nav) {
+                                0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
+                                    viewModel.unirseAClase(codigo, idUsuario)
+                                }
+                                1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
+                                              tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                                2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                                3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
                             }
-                            1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
-                                          tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
                         }
                     }
                 }
