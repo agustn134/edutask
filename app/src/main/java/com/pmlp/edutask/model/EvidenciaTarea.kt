@@ -11,5 +11,11 @@ data class EvidenciaTarea(
     val fechaEnvio: Date = Date(),
     val estado: EstadoEvidencia = EstadoEvidencia.Pendiente,
     val idAsignacion: String = "",
-    val nombreAlumno: String = ""
+    val nombreAlumno: String = "",
+    // Campos legacy para compatibilidad
+    val nombreArchivo: String? = null,
+    val textoEvidencia: String? = null,
+    // Nuevos campos
+    val archivos: List<Map<String, String>> = emptyList(), // lista de { "nombre": "...", "url": "..." }
+    val vinculos: List<String> = emptyList()
 )
