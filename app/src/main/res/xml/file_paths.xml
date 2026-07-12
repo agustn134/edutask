@@ -4,4 +4,7 @@
     <cache-path name="camera_images" path="camera/" />
     <!-- Rutas en caché externa para compatibilidad con emuladores y ROMs específicas -->
     <external-cache-path name="external_camera_images" path="camera/" />
+    <!-- Permitir compartir documentos guardados en la raíz del cache -->
+    <cache-path name="cache_root" path="." />
+    <external-cache-path name="external_cache_root" path="." />
 </paths>

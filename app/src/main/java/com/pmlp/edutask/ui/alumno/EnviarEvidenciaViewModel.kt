@@ -14,6 +14,9 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import java.io.ByteArrayOutputStream
+import android.net.Uri
+import com.google.firebase.storage.FirebaseStorage
+import java.util.UUID
 
 // ── Estados de la UI ────────────────────────────────────────────────────────
 sealed class EnviarEvidenciaUiState {
@@ -28,7 +31,15 @@ data class EvidenciaEnviadaData(
     val estado: String,
     val nombreArchivo: String?,
     val textoEvidencia: String?,
-    val fotoBase64: String?
+    val fotoBase64: String?,
+    val archivos: List<Map<String, String>>,
+    val vinculos: List<String>
+)
+
+data class ArchivoSubir(
+    val uri: Uri? = null,
+    val bitmap: Bitmap? = null,
+    val nombre: String
 )
 
 class EnviarEvidenciaViewModel : ViewModel() {
@@ -56,7 +67,9 @@ class EnviarEvidenciaViewModel : ViewModel() {
                         estado = doc.getString("estado") ?: "Pendiente",
                         nombreArchivo = doc.getString("nombreArchivo"),
                         textoEvidencia = doc.getString("textoEvidencia"),
-                        fotoBase64 = doc.getString("fotoBase64")
+                        fotoBase64 = doc.getString("fotoBase64"),
+                        archivos = (doc.get("archivos") as? List<Map<String, String>>) ?: emptyList(),
+                        vinculos = (doc.get("vinculos") as? List<String>) ?: emptyList()
                     )
                 }
             } catch (e: Exception) {
@@ -86,41 +99,58 @@ class EnviarEvidenciaViewModel : ViewModel() {
 
     // ── Enviar evidencia ─────────────────────────────────────────────────────
     fun enviarEvidencia(
+        context: android.content.Context,
         idAsignacion: String,
         nombreAlumno: String,
         tituloTarea:  String,
-        archivoBytes: ByteArray? = null,
-        nombreArchivo: String? = null,
-        textoEvidencia: String = "",
-        bitmap: Bitmap? = null
+        archivosSubir: List<ArchivoSubir>,
+        vinculos: List<String>,
+        textoEvidencia: String
     ) {
         if (idAsignacion.isBlank()) {
             _uiState.value = EnviarEvidenciaUiState.Error("ID de asignación inválido.")
             return
         }
 
-        if (textoEvidencia.isBlank() && archivoBytes == null && bitmap == null) {
+        if (textoEvidencia.isBlank() && archivosSubir.isEmpty() && vinculos.isEmpty()) {
             _uiState.value = EnviarEvidenciaUiState.Error("Debes enviar un texto, enlace o un archivo adjunto.")
+            return
+        }
+
+        if (archivosSubir.size > 3) {
+            _uiState.value = EnviarEvidenciaUiState.Error("Máximo 3 archivos permitidos.")
             return
         }
 
         viewModelScope.launch {
             _uiState.value = EnviarEvidenciaUiState.Uploading
             try {
-                var finalBase64: String? = null
+                val subidos = mutableListOf<Map<String, String>>()
 
-                if (bitmap != null) {
-                    finalBase64 = withContext(Dispatchers.IO) { bitmapToBase64(bitmap) }
-                } else if (archivoBytes != null) {
-                    finalBase64 = withContext(Dispatchers.IO) { bytesToBase64(archivoBytes) }
-                }
-
-                // Verificar que el tamaño no exceda el límite seguro para Firestore (~900KB en Base64)
-                if (finalBase64 != null && finalBase64.length > 900_000) {
-                    _uiState.value = EnviarEvidenciaUiState.Error(
-                        "El archivo es demasiado grande. Intenta con un archivo más pequeño."
-                    )
-                    return@launch
+                // Convertir cada archivo a Base64
+                for (archivo in archivosSubir) {
+                    val base64String = withContext(Dispatchers.IO) {
+                        try {
+                            if (archivo.bitmap != null) {
+                                val baos = ByteArrayOutputStream()
+                                archivo.bitmap.compress(Bitmap.CompressFormat.JPEG, 60, baos)
+                                val bytes = baos.toByteArray()
+                                Base64.encodeToString(bytes, Base64.NO_WRAP)
+                            } else if (archivo.uri != null) {
+                                context.contentResolver.openInputStream(archivo.uri)?.use { input ->
+                                    val bytes = input.readBytes()
+                                    Base64.encodeToString(bytes, Base64.NO_WRAP)
+                                } ?: ""
+                            } else {
+                                ""
+                            }
+                        } catch (e: Exception) {
+                            ""
+                        }
+                    }
+                    if (base64String.isNotBlank()) {
+                        subidos.add(mapOf("nombre" to archivo.nombre, "base64" to base64String))
+                    }
                 }
 
                 // Guardar en Firestore colección "evidencias_tarea"
@@ -129,14 +159,10 @@ class EnviarEvidenciaViewModel : ViewModel() {
                     "tituloTarea"  to tituloTarea,
                     "nombreAlumno" to nombreAlumno,
                     "fechaEnvio"   to FieldValue.serverTimestamp(),
-                    "estado"       to "Pendiente"
+                    "estado"       to "Pendiente",
+                    "archivos"     to subidos,
+                    "vinculos"     to vinculos
                 )
-
-                if (finalBase64 != null) {
-                    // Usamos "fotoBase64" por retrocompatibilidad con la pantalla del profesor
-                    evidenciaData["fotoBase64"] = finalBase64
-                    evidenciaData["nombreArchivo"] = nombreArchivo ?: "evidencia"
-                }
 
                 if (textoEvidencia.isNotBlank()) {
                     evidenciaData["textoEvidencia"] = textoEvidencia

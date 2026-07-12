@@ -19,6 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Tab
 import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,6 +29,21 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                   tareas: List<TareaItem>, pendienteCount: Int, clases: List<String>,
                   isRefreshing: Boolean, onRefresh: () -> Unit,
                   onVerTarea: (TareaItem) -> Unit = {}) {
+    val now = java.util.Date()
+    val tareasPendientes = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }
+    val tareasVencidas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && now.after(it.tarea.fechaLimite) }
+    val tareasEntregadas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia != null }
+    val tareasEvaluadas = tareas.filter { it.estado == EstadoEvidencia.Aprobada || it.estado == EstadoEvidencia.Rechazada }
+
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Pendientes", "Entregadas", "Evaluadas")
+
+    val currentTareas = when (selectedTabIndex) {
+        0 -> tareasPendientes
+        1 -> tareasEntregadas
+        else -> tareasEvaluadas
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
@@ -58,7 +75,7 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                             )
                         }
                         // Chips de cada clase
-                        items(clases) { clase ->
+                        items(clases, key = { it }) { clase ->
                             FilterChip(
                                 selected = claseSelected == clase,
                                 onClick = { onClaseSelected(clase) },
@@ -70,21 +87,38 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                 }
             }
 
-            // Título de la lista
+            // Título de la lista y Tabs Kanban
             item {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Icon(Icons.Default.FormatListBulleted, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                    Text("Lista de Tareas", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
-                    if (pendienteCount > 0 && claseSelected == null) {
-                        Badge(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError) { 
-                            Text("$pendienteCount pendientes") 
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.FormatListBulleted, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Text("Lista de Tareas", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (pendienteCount > 0 && claseSelected == null) {
+                            Badge(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError) { 
+                                Text("$pendienteCount pendientes") 
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TabRow(selectedTabIndex = selectedTabIndex) {
+                        tabs.forEachIndexed { index, title ->
+                            val count = when (index) {
+                                0 -> tareasPendientes.size
+                                1 -> tareasEntregadas.size
+                                else -> tareasEvaluadas.size
+                            }
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                text = { Text("$title ($count)", style = MaterialTheme.typography.titleSmall) }
+                            )
                         }
                     }
                 }
             }
 
             // Lista de Tareas o Estado Vacío
-            if (tareas.isEmpty()) {
+            if (currentTareas.isEmpty()) {
                 item {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
@@ -92,12 +126,31 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(Icons.Default.CheckCircleOutline, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.surfaceVariant)
-                        Text("No hay tareas para mostrar.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("No hay tareas en esta categoría.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
-                items(tareas) { item -> 
+                items(currentTareas, key = { it.idAsignacion }) { item -> 
                     TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) 
+                }
+            }
+
+            if (tareasVencidas.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
+                        Text(
+                            "Tareas Fuera de Límite", 
+                            style = MaterialTheme.typography.titleLarge, 
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                items(tareasVencidas, key = { it.idAsignacion }) { item -> 
+                    TareaCard(item.tarea, item.estado, isVencida = true, onClick = { onVerTarea(item) }) 
                 }
             }
             
@@ -107,7 +160,7 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
 }
 
 @Composable
-fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, onClick: () -> Unit = {}) {
+fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false, onClick: () -> Unit = {}) {
     val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
     ElevatedCard(
         onClick = onClick,
@@ -148,7 +201,13 @@ fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, onClick: () -> Unit = {}) {
                 
                 // Textos
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(tarea.titulo, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = tarea.titulo, 
+                        style = MaterialTheme.typography.titleSmall, 
+                        maxLines = 2, 
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (isVencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    )
                     Text(tarea.descripcion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }

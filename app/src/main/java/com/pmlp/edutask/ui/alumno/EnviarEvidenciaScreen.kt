@@ -41,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -67,7 +68,9 @@ fun EnviarEvidenciaScreen(
     val evidenciaEnviada by viewModel.evidenciaEnviada.collectAsState()
     val isLoadingEvidencia by viewModel.isLoadingEvidencia.collectAsState()
 
-    val isReadOnlyMode = evidenciaEnviada != null
+    val now = java.util.Date()
+    val isVencida = evidenciaEnviada == null && now.after(tarea.fechaLimite)
+    val isReadOnlyMode = evidenciaEnviada != null || isVencida
 
     LaunchedEffect(idEvidenciaRecibida) {
         if (idEvidenciaRecibida != null) {
@@ -75,21 +78,36 @@ fun EnviarEvidenciaScreen(
         }
     }
 
-    // Bitmap de la foto capturada (null = sin foto aún)
-    var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    // Archivo genérico adjunto (para documentos no-imagen)
-    var archivoUri by remember { mutableStateOf<Uri?>(null) }
-    var nombreArchivo by remember { mutableStateOf<String?>(null) }
+    // ── Estados para Múltiples Archivos y Vínculos ───────────────────────────
+    var archivosSubir by remember { mutableStateOf(listOf<ArchivoSubir>()) }
+    var vinculos by remember { mutableStateOf(listOf<String>()) }
+    var nuevoVinculo by remember { mutableStateOf("") }
     var textoEvidencia by remember { mutableStateOf("") }
 
     // Rellenar estados si estamos en modo lectura
     val actualTexto = if (isReadOnlyMode) evidenciaEnviada?.textoEvidencia ?: "" else textoEvidencia
-    val actualNombreArchivo = if (isReadOnlyMode) evidenciaEnviada?.nombreArchivo else nombreArchivo
+    val actualVinculos = if (isReadOnlyMode) evidenciaEnviada?.vinculos ?: emptyList() else vinculos
+    val actualArchivosEnviados = if (isReadOnlyMode) evidenciaEnviada?.archivos ?: emptyList() else emptyList()
     
-    // Bitmap en modo lectura
-    val bitmapLectura = remember(evidenciaEnviada?.fotoBase64) {
-        evidenciaEnviada?.fotoBase64?.let { decodeBase64ToBitmap(it) }
+    // Bitmap en modo lectura (decodificado de forma asíncrona para no bloquear la UI) - LEGACY
+    val base64Foto = evidenciaEnviada?.fotoBase64
+    val actualNombreArchivoLegacy = evidenciaEnviada?.nombreArchivo
+    val bitmapLectura by produceState<Bitmap?>(initialValue = null, key1 = base64Foto) {
+        if (base64Foto != null) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                decodeBase64ToBitmap(base64Foto)
+            }
+        } else {
+            value = null
+        }
+    }
+
+    fun addArchivo(archivo: ArchivoSubir) {
+        if (archivosSubir.size < 3) {
+            archivosSubir = archivosSubir + archivo
+        } else {
+            Toast.makeText(context, "Máximo 3 archivos permitidos", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // URI temporal para escribir la foto de la cámara
@@ -99,9 +117,7 @@ fun EnviarEvidenciaScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            archivoUri = uri
-            fotoBitmap = null // limpiar foto si seleccionan archivo
-            nombreArchivo = getFileName(context, uri)
+            addArchivo(ArchivoSubir(uri = uri, nombre = getFileName(context, uri) ?: "documento"))
         }
     }
     
@@ -112,9 +128,10 @@ fun EnviarEvidenciaScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let { 
-            fotoBitmap = decodeUriToSafeBitmap(context, it) 
-            archivoUri = null
-            nombreArchivo = getFileName(context, it)
+            val bitmap = decodeUriToSafeBitmap(context, it)
+            if (bitmap != null) {
+                addArchivo(ArchivoSubir(bitmap = bitmap, nombre = getFileName(context, it) ?: "imagen.jpg"))
+            }
         }
     }
 
@@ -122,9 +139,10 @@ fun EnviarEvidenciaScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let { 
-            fotoBitmap = decodeUriToSafeBitmap(context, it) 
-            archivoUri = null
-            nombreArchivo = getFileName(context, it)
+            val bitmap = decodeUriToSafeBitmap(context, it)
+            if (bitmap != null) {
+                addArchivo(ArchivoSubir(bitmap = bitmap, nombre = getFileName(context, it) ?: "imagen.jpg"))
+            }
         }
     }
 
@@ -164,9 +182,10 @@ fun EnviarEvidenciaScreen(
     ) { success ->
         if (success) {
             fotoUri?.let { uri ->
-                fotoBitmap = decodeUriToSafeBitmap(context, uri)
-                archivoUri = null
-                nombreArchivo = "foto_camara.jpg"
+                val bitmap = decodeUriToSafeBitmap(context, uri)
+                if (bitmap != null) {
+                    addArchivo(ArchivoSubir(bitmap = bitmap, nombre = "foto_camara.jpg"))
+                }
             }
         }
     }
@@ -348,29 +367,19 @@ fun EnviarEvidenciaScreen(
                     // Botón Enviar Evidencia
                     Button(
                         onClick = {
-                            var bytes: ByteArray? = null
-                            archivoUri?.let { uri ->
-                                try {
-                                    context.contentResolver.openInputStream(uri)?.use { input ->
-                                        bytes = input.readBytes()
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
                             viewModel.enviarEvidencia(
+                                context = context,
                                 idAsignacion = idAsignacion,
                                 nombreAlumno = nombreAlumno,
                                 tituloTarea  = tarea.titulo,
-                                archivoBytes = bytes,
-                                nombreArchivo = nombreArchivo,
-                                textoEvidencia = textoEvidencia,
-                                bitmap       = fotoBitmap
+                                archivosSubir = archivosSubir,
+                                vinculos = vinculos,
+                                textoEvidencia = textoEvidencia
                             )
                         },
                         modifier  = Modifier.fillMaxWidth(),
                         shape     = RoundedCornerShape(12.dp),
-                        enabled   = (fotoBitmap != null || archivoUri != null || textoEvidencia.isNotBlank()) && uiState !is EnviarEvidenciaUiState.Uploading,
+                        enabled   = (archivosSubir.isNotEmpty() || vinculos.isNotEmpty() || textoEvidencia.isNotBlank()) && uiState !is EnviarEvidenciaUiState.Uploading,
                         colors    = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
@@ -502,6 +511,23 @@ fun EnviarEvidenciaScreen(
                     }
                 }
 
+                if (isVencida) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                            Text("Esta tarea está vencida y ya no se puede entregar.", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
                 // ── Zona de texto de evidencia ─────────────────────────────────────
                 OutlinedTextField(
                     value = actualTexto,
@@ -513,104 +539,160 @@ fun EnviarEvidenciaScreen(
                     readOnly = isReadOnlyMode
                 )
 
-                // ── Zona de previsualización del archivo ───────────────────────
+                // ── Zona de Vínculos ───────────────────────────────────────────────────────
+                if (!isReadOnlyMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = nuevoVinculo,
+                            onValueChange = { nuevoVinculo = it },
+                            label = { Text("Añadir un enlace") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (nuevoVinculo.isNotBlank()) {
+                                    vinculos = vinculos + nuevoVinculo
+                                    nuevoVinculo = ""
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Añadir")
+                        }
+                    }
+                }
+
+                if (actualVinculos.isNotEmpty()) {
+                    Text(
+                        "Enlaces añadidos:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    actualVinculos.forEach { link ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(link, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+
+                // ── Zona de Archivos ───────────────────────────────────────────────────────
                 Text(
-                    "Archivos Adjuntos",
+                    "Archivos Adjuntos (${if (isReadOnlyMode) actualArchivosEnviados.size + (if(base64Foto!=null) 1 else 0) else archivosSubir.size}/3)",
                     style      = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(4f / 3f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(
-                            width = 1.5.dp,
-                            color = MaterialTheme.colorScheme.outline,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier            = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        // Placeholder — visible cuando no hay foto ni archivo
-                        AnimatedVisibility(
-                            visible = fotoBitmap == null && archivoUri == null,
-                            enter   = fadeIn(),
-                            exit    = fadeOut()
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Mostrar archivos en modo escritura
+                if (!isReadOnlyMode && archivosSubir.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        archivosSubir.forEachIndexed { index, archivo ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Surface(
-                                    modifier = Modifier.size(72.dp),
-                                    shape    = MaterialTheme.shapes.extraLarge,
-                                    color    = MaterialTheme.colorScheme.surface
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            Icons.Default.CameraAlt,
+                                            if (archivo.bitmap != null) Icons.Default.Image else Icons.Default.InsertDriveFile,
                                             contentDescription = null,
-                                            modifier = Modifier.size(36.dp),
-                                            tint     = MaterialTheme.colorScheme.primary
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(archivo.nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                    }
+                                    IconButton(onClick = { 
+                                        val mList = archivosSubir.toMutableList()
+                                        mList.removeAt(index)
+                                        archivosSubir = mList
+                                    }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
-                                Text(
-                                    if (isReadOnlyMode) "Evidencia enviada" else "Toca los botones para adjuntar\ntu evidencia",
-                                    style     = MaterialTheme.typography.bodyMedium,
-                                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
                             }
                         }
+                    }
+                }
 
-                        // Documento genérico — visible cuando hay archivo pero no foto
-                        AnimatedVisibility(
-                            visible = (archivoUri != null && fotoBitmap == null && !isReadOnlyMode) || 
-                                      (isReadOnlyMode && evidenciaEnviada?.fotoBase64 == null && actualNombreArchivo != null),
-                            enter   = fadeIn() + scaleIn(initialScale = 0.92f),
-                            exit    = fadeOut()
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                // Mostrar archivos en modo lectura
+                if (isReadOnlyMode) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Archivos guardados (Base64)
+                        actualArchivosEnviados.forEach { archivoMap ->
+                            val base64Data = archivoMap["base64"] ?: ""
+                            val nombre = archivoMap["nombre"] ?: "Archivo"
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.InsertDriveFile,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    actualNombreArchivo ?: "Archivo seleccionado",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                    }
+                                    val ctx = LocalContext.current
+                                    IconButton(onClick = { 
+                                        if (base64Data.isNotBlank()) {
+                                            abrirArchivoBase64(ctx, base64Data, nombre)
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                             }
                         }
 
-                        // Imagen capturada — visible cuando hay foto
-                        AnimatedVisibility(
-                            visible = (!isReadOnlyMode && fotoBitmap != null) || (isReadOnlyMode && bitmapLectura != null),
-                            enter   = fadeIn() + scaleIn(initialScale = 0.92f),
-                            exit    = fadeOut()
-                        ) {
-                            val bmpToShow = if (isReadOnlyMode) bitmapLectura else fotoBitmap
-                            bmpToShow?.let { bmp ->
+                        // Archivo Legacy Base64
+                        if (base64Foto != null) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(actualNombreArchivoLegacy ?: "Archivo antiguo", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                    }
+                                    val ctx = LocalContext.current
+                                    IconButton(onClick = { 
+                                        abrirArchivoBase64(ctx, base64Foto, actualNombreArchivoLegacy) 
+                                    }) {
+                                        Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                            
+                            // Vista previa de imagen si es bitmap
+                            if (bitmapLectura != null) {
                                 Image(
-                                    bitmap             = bmp.asImageBitmap(),
+                                    bitmap = bitmapLectura!!.asImageBitmap(),
                                     contentDescription = "Foto de evidencia",
-                                    modifier           = Modifier.fillMaxSize(),
-                                    contentScale       = ContentScale.Crop
+                                    modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
                                 )
                             }
                         }
@@ -747,6 +829,30 @@ private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     } catch (e: Exception) {
         null
+    }
+}
+
+private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
+    try {
+        val cleanString = if (base64Str.contains(",")) {
+            base64Str.substring(base64Str.indexOf(",") + 1)
+        } else {
+            base64Str
+        }
+        val bytes = android.util.Base64.decode(cleanString, android.util.Base64.DEFAULT)
+        val safeFileName = fileName ?: "documento.pdf"
+        val file = File(context.cacheDir, safeFileName)
+        FileOutputStream(file).use { it.write(bytes) }
+        
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, "Abrir archivo con"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Error al abrir el archivo", Toast.LENGTH_SHORT).show()
     }
 }
 

@@ -30,6 +30,15 @@ import androidx.compose.ui.graphics.asImageBitmap
 import android.util.Base64
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +95,9 @@ fun EvaluarTareaScreen(
                             fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
                             estado = estadoEnum,
                             idAsignacion = idAsignacionStr,
-                            nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
+                            nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo",
+                            nombreArchivo = doc.getString("nombreArchivo"),
+                            textoEvidencia = doc.getString("textoEvidencia")
                         )
                     }
                 }
@@ -203,50 +214,131 @@ fun EvaluarTareaScreen(
 
                             // Attachment / Evidence image link
                             Text(
-                                text = "Archivos Adjuntos / Evidencia:",
+                                text = "Evidencia:",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(6.dp))
+
+                            if (!ev.textoEvidencia.isNullOrBlank()) {
+                                OutlinedCard(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = ev.textoEvidencia,
+                                        modifier = Modifier.padding(12.dp),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
                             
-                            val bitmap = remember(ev.fotoBase64) {
-                                if (ev.fotoBase64.isNotBlank()) {
-                                    decodeBase64ToBitmap(ev.fotoBase64)
-                                } else {
-                                    null
+                            // ── Zona de Vínculos ───────────────────────────────────────────────────────
+                            if (ev.vinculos.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    "Enlaces añadidos:",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                ev.vinculos.forEach { link ->
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+                                        Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        val ctx = LocalContext.current
+                                        TextButton(onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link))
+                                            ctx.startActivity(intent)
+                                        }, contentPadding = PaddingValues(0.dp)) {
+                                            Text(link, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
                                 }
                             }
 
-                            if (bitmap != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedCard(
-                                    modifier = Modifier.fillMaxWidth().height(220.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                ) {
-                                    Image(
-                                        bitmap = bitmap.asImageBitmap(),
-                                        contentDescription = "Evidencia adjunta",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                                    )
-                                }
-                            } else if (ev.fotoBase64.isNotBlank()) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.Default.BrokenImage, null, tint = MaterialTheme.colorScheme.error)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Error al decodificar la evidencia.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            } else {
+                            // ── Zona de Archivos ───────────────────────────────────────────────────────
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val totalArchivos = ev.archivos.size + (if (ev.fotoBase64.isNotBlank()) 1 else 0)
+                            if (totalArchivos > 0) {
                                 Text(
-                                    text = "No se subieron archivos adjuntos.",
+                                    "Archivos Adjuntos ($totalArchivos):",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Archivos de Firestore (Base64)
+                                ev.archivos.forEach { archivoMap ->
+                                    val base64Data = archivoMap["base64"] ?: ""
+                                    val nombre = archivoMap["nombre"] ?: "Archivo"
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                            }
+                                            val ctx = LocalContext.current
+                                            IconButton(onClick = { 
+                                                if (base64Data.isNotBlank()) {
+                                                    abrirArchivoBase64(ctx, base64Data, nombre)
+                                                }
+                                            }) {
+                                                Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Archivo Legacy
+                                if (ev.fotoBase64.isNotBlank()) {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(ev.nombreArchivo ?: "Archivo antiguo", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                            }
+                                            val ctx = LocalContext.current
+                                            IconButton(onClick = { 
+                                                abrirArchivoBase64(ctx, ev.fotoBase64, ev.nombreArchivo) 
+                                            }) {
+                                                Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
+                                    }
+
+                                    val bitmap = remember(ev.fotoBase64) { decodeBase64ToBitmap(ev.fotoBase64) }
+                                    if (bitmap != null) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Image(
+                                            bitmap = bitmap.asImageBitmap(),
+                                            contentDescription = "Evidencia adjunta",
+                                            modifier = Modifier.fillMaxWidth().height(220.dp).clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Fit
+                                        )
+                                    }
+                                }
+                            } else if (ev.textoEvidencia.isNullOrBlank() && ev.vinculos.isEmpty()) {
+                                Text(
+                                    text = "No se subieron archivos adjuntos ni texto.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -456,5 +548,29 @@ private fun decodeBase64ToBitmap(base64Str: String): android.graphics.Bitmap? {
         android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
     } catch (e: Exception) {
         null
+    }
+}
+
+private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
+    try {
+        val cleanString = if (base64Str.contains(",")) {
+            base64Str.substring(base64Str.indexOf(",") + 1)
+        } else {
+            base64Str
+        }
+        val bytes = android.util.Base64.decode(cleanString, android.util.Base64.DEFAULT)
+        val safeFileName = fileName ?: "documento.pdf"
+        val file = File(context.cacheDir, safeFileName)
+        FileOutputStream(file).use { it.write(bytes) }
+        
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Abrir archivo con"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Error al abrir el archivo", Toast.LENGTH_SHORT).show()
     }
 }

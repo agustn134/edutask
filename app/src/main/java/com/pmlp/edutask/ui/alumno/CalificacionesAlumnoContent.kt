@@ -39,7 +39,7 @@ fun CalificacionesContent(
             if (tareasEvaluadas.isEmpty()) {
                 item { Text("Aún no tienes calificaciones.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             } else {
-                items(tareasEvaluadas) { item -> 
+                items(tareasEvaluadas, key = { it.idAsignacion }) { item -> 
                     CalificacionCard(item, onVerTarea) 
                 }
             }

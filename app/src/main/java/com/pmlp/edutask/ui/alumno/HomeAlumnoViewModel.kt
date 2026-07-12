@@ -179,21 +179,21 @@ class HomeAlumnoViewModel : ViewModel() {
                                                     paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario, idEvidencia)
                                                     _uiState.value = HomeAlumnoState.Success(
                                                         clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                                        tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                                                        tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite }
                                                     )
                                                 }
                                         } else {
                                             paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, null, null, idEvidencia)
                                             _uiState.value = HomeAlumnoState.Success(
                                                 clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                                tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                                                tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite }
                                             )
                                         }
                                     } else {
                                         paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion, null, null, null)
                                         _uiState.value = HomeAlumnoState.Success(
                                             clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                            tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                                            tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite }
                                         )
                                     }
                                 }
@@ -203,7 +203,7 @@ class HomeAlumnoViewModel : ViewModel() {
                         // Emitimos éxito preliminar (se sobreescribirá si las evidencias cargan en milisegundos)
                         _uiState.value = HomeAlumnoState.Success(
                             clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                            tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                            tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite }
                         )
 
                     } catch (e: Exception) {
