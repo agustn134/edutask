@@ -58,11 +58,22 @@ fun EnviarEvidenciaScreen(
     tarea:        Tarea,
     idAsignacion: String,
     nombreAlumno: String,
+    idEvidenciaRecibida: String? = null,
     viewModel:    EnviarEvidenciaViewModel = viewModel(),
     onBack:       () -> Unit = {}
 ) {
     val context  = LocalContext.current
     val uiState  by viewModel.uiState.collectAsState()
+    val evidenciaEnviada by viewModel.evidenciaEnviada.collectAsState()
+    val isLoadingEvidencia by viewModel.isLoadingEvidencia.collectAsState()
+
+    val isReadOnlyMode = evidenciaEnviada != null
+
+    LaunchedEffect(idEvidenciaRecibida) {
+        if (idEvidenciaRecibida != null) {
+            viewModel.cargarEvidenciaEnviada(idEvidenciaRecibida)
+        }
+    }
 
     // Bitmap de la foto capturada (null = sin foto aún)
     var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -71,6 +82,15 @@ fun EnviarEvidenciaScreen(
     var archivoUri by remember { mutableStateOf<Uri?>(null) }
     var nombreArchivo by remember { mutableStateOf<String?>(null) }
     var textoEvidencia by remember { mutableStateOf("") }
+
+    // Rellenar estados si estamos en modo lectura
+    val actualTexto = if (isReadOnlyMode) evidenciaEnviada?.textoEvidencia ?: "" else textoEvidencia
+    val actualNombreArchivo = if (isReadOnlyMode) evidenciaEnviada?.nombreArchivo else nombreArchivo
+    
+    // Bitmap en modo lectura
+    val bitmapLectura = remember(evidenciaEnviada?.fotoBase64) {
+        evidenciaEnviada?.fotoBase64?.let { decodeBase64ToBitmap(it) }
+    }
 
     // URI temporal para escribir la foto de la cámara
     var fotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -251,7 +271,35 @@ fun EnviarEvidenciaScreen(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (isReadOnlyMode) {
+                        if (evidenciaEnviada?.estado == "Pendiente") {
+                            OutlinedButton(
+                                onClick = { 
+                                    evidenciaEnviada?.idEvidencia?.let {
+                                        viewModel.anularEvidencia(it) { onBack() }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape    = RoundedCornerShape(12.dp),
+                                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                                colors   = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Anular Entrega")
+                            }
+                        } else {
+                            // Está evaluada
+                            Button(
+                                onClick = { onBack() },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape    = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Regresar")
+                            }
+                        }
+                    } else {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         // Botón Tomar Foto
                         OutlinedButton(
                             onClick = {
@@ -345,259 +393,279 @@ fun EnviarEvidenciaScreen(
                             Text("Enviar Evidencia", style = MaterialTheme.typography.labelLarge)
                         }
                     }
+                    } // Fin de if (!isReadOnlyMode)
                 }
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // ── Card de detalle de la tarea ───────────────────────────────
-            ElevatedCard(
-                modifier  = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                colors    = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Encabezado
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            modifier = Modifier.size(44.dp),
-                            shape    = MaterialTheme.shapes.medium,
-                            color    = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Assignment,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                tarea.titulo,
-                                style      = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines   = 2,
-                                overflow   = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                tarea.nombreClase,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                    // Descripción
-                    if (tarea.descripcion.isNotBlank()) {
-                        Text(
-                            tarea.descripcion,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Fecha límite
-                    val fmt = SimpleDateFormat("dd 'de' MMMM 'a las' HH:mm", Locale("es", "MX"))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Schedule,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint     = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            "Fecha límite: ${fmt.format(tarea.fechaLimite)}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-
-                    // Alumno
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint     = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            nombreAlumno,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // ── Zona de texto de evidencia ─────────────────────────────────────
-            OutlinedTextField(
-                value = textoEvidencia,
-                onValueChange = { textoEvidencia = it },
-                label = { Text("Texto o Enlace (Opcional)") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                maxLines = 5
-            )
-
-            // ── Zona de previsualización del archivo ───────────────────────
-            Text(
-                "Archivos Adjuntos",
-                style      = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Box(
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(4f / 3f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .border(
-                        width = 1.5.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(16.dp)
-                    )
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier            = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                // ── Card de detalle de la tarea ───────────────────────────────
+                ElevatedCard(
+                    modifier  = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+                    colors    = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 ) {
-                    // Placeholder — visible cuando no hay foto ni archivo
-                    AnimatedVisibility(
-                        visible = fotoBitmap == null && archivoUri == null,
-                        enter   = fadeIn(),
-                        exit    = fadeOut()
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        // Encabezado
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Surface(
-                                modifier = Modifier.size(72.dp),
-                                shape    = MaterialTheme.shapes.extraLarge,
-                                color    = MaterialTheme.colorScheme.surface
+                                modifier = Modifier.size(44.dp),
+                                shape    = MaterialTheme.shapes.medium,
+                                color    = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        Icons.Default.CameraAlt,
+                                        Icons.AutoMirrored.Filled.Assignment,
                                         contentDescription = null,
-                                        modifier = Modifier.size(36.dp),
-                                        tint     = MaterialTheme.colorScheme.primary
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    tarea.titulo,
+                                    style      = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines   = 2,
+                                    overflow   = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    tarea.nombreClase,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                        // Descripción
+                        if (tarea.descripcion.isNotBlank()) {
                             Text(
-                                "Toca los botones para adjuntar\ntu evidencia",
-                                style     = MaterialTheme.typography.bodyMedium,
-                                color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                tarea.descripcion,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
 
-                    // Documento genérico — visible cuando hay archivo pero no foto
-                    AnimatedVisibility(
-                        visible = archivoUri != null && fotoBitmap == null,
-                        enter   = fadeIn() + scaleIn(initialScale = 0.92f),
-                        exit    = fadeOut()
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        // Fecha límite
+                        val fmt = SimpleDateFormat("dd 'de' MMMM 'a las' HH:mm", Locale("es", "MX"))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                Icons.Default.InsertDriveFile,
+                                Icons.Default.Schedule,
                                 contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                modifier = Modifier.size(16.dp),
+                                tint     = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                nombreArchivo ?: "Archivo seleccionado",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 16.dp)
+                                "Fecha límite: ${fmt.format(tarea.fechaLimite)}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
-                    }
 
-                    // Imagen capturada — visible cuando hay foto
-                    AnimatedVisibility(
-                        visible = fotoBitmap != null,
-                        enter   = fadeIn() + scaleIn(initialScale = 0.92f),
-                        exit    = fadeOut()
-                    ) {
-                        fotoBitmap?.let { bmp ->
-                            Image(
-                                bitmap             = bmp.asImageBitmap(),
-                                contentDescription = "Foto de evidencia",
-                                modifier           = Modifier.fillMaxSize(),
-                                contentScale       = ContentScale.Crop
+                        // Alumno
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint     = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                nombreAlumno,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-            }
 
-            // ── Nota informativa ──────────────────────────────────────────
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors   = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment     = Alignment.Top
+                // ── Zona de texto de evidencia ─────────────────────────────────────
+                OutlinedTextField(
+                    value = actualTexto,
+                    onValueChange = { if (!isReadOnlyMode) textoEvidencia = it },
+                    label = { Text("Texto o Enlace (Opcional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    maxLines = 5,
+                    readOnly = isReadOnlyMode
+                )
+
+                // ── Zona de previsualización del archivo ───────────────────────
+                Text(
+                    "Archivos Adjuntos",
+                    style      = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(4f / 3f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(
+                            width = 1.5.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp).padding(top = 2.dp),
-                        tint     = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Text(
-                        "Asegúrate de que los archivos o el enlace " +
-                        "sean correctos antes de enviar.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Column(
+                        modifier            = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        // Placeholder — visible cuando no hay foto ni archivo
+                        AnimatedVisibility(
+                            visible = fotoBitmap == null && archivoUri == null,
+                            enter   = fadeIn(),
+                            exit    = fadeOut()
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.size(72.dp),
+                                    shape    = MaterialTheme.shapes.extraLarge,
+                                    color    = MaterialTheme.colorScheme.surface
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.CameraAlt,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(36.dp),
+                                            tint     = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    if (isReadOnlyMode) "Evidencia enviada" else "Toca los botones para adjuntar\ntu evidencia",
+                                    style     = MaterialTheme.typography.bodyMedium,
+                                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+
+                        // Documento genérico — visible cuando hay archivo pero no foto
+                        AnimatedVisibility(
+                            visible = (archivoUri != null && fotoBitmap == null && !isReadOnlyMode) || 
+                                      (isReadOnlyMode && evidenciaEnviada?.fotoBase64 == null && actualNombreArchivo != null),
+                            enter   = fadeIn() + scaleIn(initialScale = 0.92f),
+                            exit    = fadeOut()
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.InsertDriveFile,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    actualNombreArchivo ?: "Archivo seleccionado",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            }
+                        }
+
+                        // Imagen capturada — visible cuando hay foto
+                        AnimatedVisibility(
+                            visible = (!isReadOnlyMode && fotoBitmap != null) || (isReadOnlyMode && bitmapLectura != null),
+                            enter   = fadeIn() + scaleIn(initialScale = 0.92f),
+                            exit    = fadeOut()
+                        ) {
+                            val bmpToShow = if (isReadOnlyMode) bitmapLectura else fotoBitmap
+                            bmpToShow?.let { bmp ->
+                                Image(
+                                    bitmap             = bmp.asImageBitmap(),
+                                    contentDescription = "Foto de evidencia",
+                                    modifier           = Modifier.fillMaxSize(),
+                                    contentScale       = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
                 }
+
+                // ── Nota informativa ──────────────────────────────────────────
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors   = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment     = Alignment.Top
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp).padding(top = 2.dp),
+                            tint     = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            if (isReadOnlyMode) {
+                                if (evidenciaEnviada?.estado == "Pendiente") "Esta evidencia ha sido enviada y está pendiente de revisión."
+                                else "Esta evidencia ya fue evaluada: ${evidenciaEnviada?.estado}."
+                            } else {
+                                "Asegúrate de que los archivos o el enlace " +
+                                "sean correctos antes de enviar."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+
+                // Espacio extra para el bottom bar
+                Spacer(Modifier.height(8.dp))
             }
 
-            // Espacio extra para el bottom bar
-            Spacer(Modifier.height(8.dp))
+            // Overlay Loading 
+            if (isLoadingEvidencia) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
         }
-
-        // El espacio extra se mantiene si es necesario
     }
 }
 
@@ -670,6 +738,16 @@ private fun getFileName(context: Context, uri: Uri): String {
         }
     }
     return result ?: "archivo"
+}
+
+// ── Helper: Decodificar Base64 a Bitmap ──────────────────────────────────────
+private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
+    return try {
+        val bytes = android.util.Base64.decode(base64Str, android.util.Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    } catch (e: Exception) {
+        null
+    }
 }
 
 // ── Preview ──────────────────────────────────────────────────────────────────

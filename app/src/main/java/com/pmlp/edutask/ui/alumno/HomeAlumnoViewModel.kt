@@ -18,7 +18,8 @@ data class TareaItem(
     val estado: EstadoEvidencia,
     val idAsignacion: String,
     val calificacion: Int? = null,
-    val comentario: String? = null
+    val comentario: String? = null,
+    val idEvidencia: String? = null
 )
 
 sealed class HomeAlumnoState {
@@ -175,21 +176,21 @@ class HomeAlumnoViewModel : ViewModel() {
                                                         comentario = califSnapshot.documents[0].getString("comentario")
                                                     }
                                                     
-                                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario)
+                                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario, idEvidencia)
                                                     _uiState.value = HomeAlumnoState.Success(
                                                         clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
                                                         tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
                                                     )
                                                 }
                                         } else {
-                                            paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, null)
+                                            paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, null, null, idEvidencia)
                                             _uiState.value = HomeAlumnoState.Success(
                                                 clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
                                                 tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
                                             )
                                         }
                                     } else {
-                                        paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion, null)
+                                        paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion, null, null, null)
                                         _uiState.value = HomeAlumnoState.Success(
                                             clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
                                             tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }

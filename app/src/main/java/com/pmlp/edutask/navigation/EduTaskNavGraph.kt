@@ -36,7 +36,7 @@ object EduTaskRoutes {
     const val LISTA_EVENTOS = "lista_eventos"
     const val FORMULARIO_EVENTO = "formulario_evento?idEvento={idEvento}"
     const val ENVIAR_EVIDENCIA =
-        "enviar_evidencia/{idAsignacion}/{idTarea}/{titulo}/{descripcion}/{fechaLimite}/{nombreClase}/{nombreAlumno}"
+        "enviar_evidencia/{idAsignacion}/{idTarea}/{titulo}/{descripcion}/{fechaLimite}/{nombreClase}/{nombreAlumno}?idEvidencia={idEvidencia}"
     const val CREAR_TAREA   = "crear_tarea/{idUsuario}?idTarea={idTarea}"
     const val EVALUAR_TAREA = "evaluar_tarea/{idEvidencia}/{idUsuario}"
     const val ALUMNOS_CLASE = "alumnos_clase/{idClase}/{nombreClase}"
@@ -62,10 +62,12 @@ object EduTaskRoutes {
     fun enviarEvidencia(
         idAsignacion: String,
         tarea:        Tarea,
-        nombreAlumno: String
+        nombreAlumno: String,
+        idEvidencia:  String? = null
     ) = "enviar_evidencia/${enc(idAsignacion)}/${enc(tarea.idTarea)}/${enc(tarea.titulo)}" +
         "/${enc(tarea.descripcion)}/${tarea.fechaLimite.time}" +
-        "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}"
+        "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}" +
+        if (idEvidencia != null) "?idEvidencia=${enc(idEvidencia)}" else ""
 
     fun crearTarea(idUsuario: String, idTarea: String? = null)  = "crear_tarea/${enc(idUsuario)}" + if (idTarea != null) "?idTarea=${enc(idTarea)}" else ""
     fun evaluarTarea(idEvidencia: String, idUsuario: String)  = "evaluar_tarea/${enc(idEvidencia)}/${enc(idUsuario)}"
@@ -100,7 +102,7 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
                 carrera      = EduTaskRoutes.dec(back.arguments?.getString("carrera")),
                 onVerTarea   = { item ->
                     navController.navigate(
-                        EduTaskRoutes.enviarEvidencia(item.idAsignacion, item.tarea, nombreAlumno)
+                        EduTaskRoutes.enviarEvidencia(item.idAsignacion, item.tarea, nombreAlumno, item.idEvidencia)
                     )
                 },
                 onLogout = {
@@ -133,7 +135,12 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
             )
         }
 
-        composable(EduTaskRoutes.ENVIAR_EVIDENCIA) { back ->
+        composable(
+            route = EduTaskRoutes.ENVIAR_EVIDENCIA,
+            arguments = listOf(
+                navArgument("idEvidencia") { nullable = true; defaultValue = null }
+            )
+        ) { back ->
             val args = back.arguments
             val tarea = Tarea(
                 idTarea     = EduTaskRoutes.dec(args?.getString("idTarea")),
@@ -147,6 +154,7 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
                 tarea        = tarea,
                 idAsignacion = EduTaskRoutes.dec(args?.getString("idAsignacion")),
                 nombreAlumno = EduTaskRoutes.dec(args?.getString("nombreAlumno")),
+                idEvidenciaRecibida = args?.getString("idEvidencia")?.let { EduTaskRoutes.dec(it) },
                 onBack       = { navController.popBackStack() }
             )
         }
