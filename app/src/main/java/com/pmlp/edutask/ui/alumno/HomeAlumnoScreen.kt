@@ -27,16 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-
-private val CLASES = listOf("PMLP - Prog. Movil", "BD - Bases de Datos", "IS - Ing. Software")
-private val TAREAS = listOf(
-    Tarea(1, "Evidencia Actividad 3",       "Captura de pantalla", LocalDateTime.now().plusHours(6),  1, "PMLP") to EstadoEvidencia.Pendiente,
-    Tarea(2, "Diagrama ER - Proyecto Final","Modelo ER completo",   LocalDateTime.now().plusDays(5),  2, "BD")   to EstadoEvidencia.Aprobada,
-    Tarea(3, "Casos de Uso del Sistema",    "Documento UML",        LocalDateTime.now().minusDays(1), 3, "IS")   to EstadoEvidencia.Rechazada,
-    Tarea(4, "Prototipo Figma - Sprint 2",  "Pantallas hi-fi",      LocalDateTime.now().plusDays(3),  1, "PMLP") to EstadoEvidencia.Pendiente
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pmlp.edutask.ui.EventosSharedViewModel
+import com.pmlp.edutask.ui.EventosUiState
+import java.text.SimpleDateFormat
 
 private data class NavItem(val label: String, val icon: ImageVector)
 private val NAV_ITEMS = listOf(
@@ -49,9 +43,12 @@ private val NAV_ITEMS = listOf(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun HomeAlumnoScreen(
+    idUsuario: String    = "",
     nombreAlumno: String = "Juan Ramirez",
     carrera: String      = "Ingenieria de Software",
-    onSubirEvidencia: () -> Unit = {},
+    viewModel: HomeAlumnoViewModel = viewModel(),
+    eventosViewModel: EventosSharedViewModel = viewModel(),
+    onVerTarea: (TareaItem) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val context    = LocalContext.current
@@ -60,10 +57,21 @@ fun HomeAlumnoScreen(
 
     var selectedNav       by remember { mutableIntStateOf(0) }
     var claseSelected     by remember { mutableStateOf<String?>(null) }
-    val pendienteCount    = TAREAS.count { (_, e) -> e == EstadoEvidencia.Pendiente }
-    val initials          = nombreAlumno.split(" ").take(2).joinToString("") { it.first().toString().uppercase() }
-    val tareasFiltradas   = if (claseSelected == null) TAREAS
-                            else TAREAS.filter { (t, _) -> claseSelected!!.startsWith(t.nombreClase) }
+    
+    val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val eventosState by eventosViewModel.uiState.collectAsState()
+
+    LaunchedEffect(idUsuario) {
+        viewModel.fetchUserData(idUsuario)
+        eventosViewModel.fetchEventos()
+    }
+
+    val pendienteCount = if (uiState is HomeAlumnoState.Success) {
+        (uiState as HomeAlumnoState.Success).tareas.count { it.estado == EstadoEvidencia.Pendiente }
+    } else 0
+
+    val initials = nombreAlumno.split(" ").take(2).joinToString("") { it.first().toString().uppercase() }
 
     if (isCompact) {
         Scaffold(
@@ -90,10 +98,8 @@ fun HomeAlumnoScreen(
                         }
                     },
                     actions = {
-                        BadgedBox(badge = { if (pendienteCount > 0) Badge { Text(pendienteCount.toString()) } }) {
-                            IconButton(onClick = {}) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Notificaciones")
-                            }
+                        IconButton(onClick = onLogout) {
+                            Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión")
                         }
                     },
                     colors = TopAppBarDefaults.mediumTopAppBarColors(
@@ -118,18 +124,39 @@ fun HomeAlumnoScreen(
                     }
                 }
             },
-            floatingActionButton = {
-                ExtendedFloatingActionButton(
-                    onClick = onSubirEvidencia,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor   = MaterialTheme.colorScheme.onPrimaryContainer,
-                    icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Subir Evidencia") },
-                    text = { Text("Subir Evidencia", style = MaterialTheme.typography.labelLarge) }
-                )
-            }
+
         ) { pad ->
-            TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
-                          tareasFiltradas, pendienteCount)
+            when (uiState) {
+                is HomeAlumnoState.Loading -> {
+                    Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is HomeAlumnoState.Error -> {
+                    Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                        Text("Error al cargar datos.", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                is HomeAlumnoState.Success -> {
+                    val data = uiState as HomeAlumnoState.Success
+                    val tareasFiltradas = if (claseSelected == null) data.tareas
+                                          else data.tareas.filter { it.tarea.nombreClase == claseSelected }
+                    
+                    val eventos = if (eventosState is EventosUiState.Success) {
+                        (eventosState as EventosUiState.Success).eventos
+                    } else emptyList()
+                    
+                    when (selectedNav) {
+                        0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
+                            viewModel.unirseAClase(codigo, idUsuario)
+                        }
+                        1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
+                                      tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                        2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                        3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
+                    }
+                }
+            }
         }
     } else {
         Row(Modifier.fillMaxSize()) {
@@ -145,11 +172,6 @@ fun HomeAlumnoScreen(
                                    }
                                }
                                Spacer(Modifier.height(8.dp))
-                               ExtendedFloatingActionButton(onClick = onSubirEvidencia,
-                                   containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                   contentColor   = MaterialTheme.colorScheme.onPrimaryContainer,
-                                   icon = { Icon(Icons.Default.CameraAlt, "Subir Evidencia") },
-                                   text = { Text("Evidencia", style = MaterialTheme.typography.labelMedium) })
                            }) {
                 NAV_ITEMS.forEachIndexed { i, item ->
                     NavigationRailItem(selected = selectedNav == i, onClick = { selectedNav = i },
@@ -167,9 +189,7 @@ fun HomeAlumnoScreen(
                                  }
                              },
                              actions = {
-                                 BadgedBox(badge = { if (pendienteCount > 0) Badge { Text(pendienteCount.toString()) } }) {
-                                     IconButton(onClick = {}) { Icon(Icons.Default.Notifications, "Notificaciones") }
-                                 }
+                                 IconButton(onClick = onLogout) { Icon(Icons.Default.ExitToApp, "Cerrar sesión") }
                              },
                              colors = TopAppBarDefaults.largeTopAppBarColors(
                                  containerColor = MaterialTheme.colorScheme.surface,
@@ -177,104 +197,42 @@ fun HomeAlumnoScreen(
                              )
                          )
                      }) { pad ->
-                TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
-                              tareasFiltradas, pendienteCount)
-            }
-        }
-    }
-}
-
-@Composable
-private fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (String) -> Unit,
-                          tareas: List<Pair<Tarea, EstadoEvidencia>>, pendienteCount: Int) {
-    LazyColumn(modifier = modifier.fillMaxSize(),
-               contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-               verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Text("Mis Clases", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(end = 8.dp)) {
-                items(CLASES) { clase ->
-                    val chipColor by animateColorAsState(
-                        targetValue = if (claseSelected == clase) MaterialTheme.colorScheme.primaryContainer
-                                      else MaterialTheme.colorScheme.surface,
-                        animationSpec = tween(300), label = "chipColor"
-                    )
-                    FilterChip(selected = claseSelected == clase, onClick = { onClaseSelected(clase) },
-                               label = { Text(clase, style = MaterialTheme.typography.labelMedium) },
-                               leadingIcon = { if (claseSelected == clase) Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) })
-                }
-            }
-        }
-        item {
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Tareas Pendientes", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                if (pendienteCount > 0) Badge(containerColor = MaterialTheme.colorScheme.error,
-                                              contentColor   = MaterialTheme.colorScheme.onError) { Text(pendienteCount.toString()) }
-            }
-        }
-        items(tareas) { (tarea, estado) -> TareaCard(tarea, estado) }
-        item { Spacer(Modifier.height(72.dp)) }
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun TareaCard(tarea: Tarea, estado: EstadoEvidencia) {
-    val fmt = DateTimeFormatter.ofPattern("dd MMM, HH:mm")
-    ElevatedCard(modifier = Modifier.fillMaxWidth(),
-                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-                 colors    = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-        ListItem(
-            headlineContent  = { Text(tarea.titulo, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-            supportingContent = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(tarea.descripcion, style = MaterialTheme.typography.bodySmall,
-                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AssistChip(onClick = {}, label = { Text(tarea.nombreClase, style = MaterialTheme.typography.labelSmall) },
-                                   leadingIcon = { Icon(Icons.Default.School, null, Modifier.size(AssistChipDefaults.IconSize)) },
-                                   border = AssistChipDefaults.assistChipBorder(enabled = true))
-                        Icon(Icons.Default.Schedule, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(tarea.fechaLimite.format(fmt), style = MaterialTheme.typography.labelSmall,
-                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                when (uiState) {
+                    is HomeAlumnoState.Loading -> {
+                        Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is HomeAlumnoState.Error -> {
+                        Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
+                            Text("Error al cargar datos.", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    is HomeAlumnoState.Success -> {
+                        val data = uiState as HomeAlumnoState.Success
+                        val tareasFiltradas = if (claseSelected == null) data.tareas
+                                              else data.tareas.filter { it.tarea.nombreClase == claseSelected }
+                        
+                        val eventos = if (eventosState is EventosUiState.Success) {
+                            (eventosState as EventosUiState.Success).eventos
+                        } else emptyList()
+                        
+                        when (selectedNav) {
+                            0 -> InicioContent(Modifier.padding(pad), pendienteCount, data.tareas, eventos, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea) { codigo ->
+                                viewModel.unirseAClase(codigo, idUsuario)
+                            }
+                            1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
+                                          tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                            3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas)
+                        }
                     }
                 }
-            },
-            leadingContent  = {
-                Icon(when (estado) {
-                         EstadoEvidencia.Aprobada  -> Icons.Default.CheckCircle
-                         EstadoEvidencia.Rechazada -> Icons.Default.Cancel
-                         EstadoEvidencia.Pendiente -> Icons.Default.HourglassEmpty
-                     },
-                     contentDescription = "Estado: ${estado.name}",
-                     tint = when (estado) {
-                         EstadoEvidencia.Aprobada  -> MaterialTheme.colorScheme.tertiary
-                         EstadoEvidencia.Rechazada -> MaterialTheme.colorScheme.error
-                         EstadoEvidencia.Pendiente -> MaterialTheme.colorScheme.primary
-                     })
-            },
-            trailingContent = { EstadoChip(estado) },
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier.clickable {}
-        )
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+        }
     }
 }
 
-@Composable
-fun EstadoChip(estado: EstadoEvidencia) {
-    val label = when (estado) { EstadoEvidencia.Pendiente -> "Pendiente"; EstadoEvidencia.Aprobada -> "Aprobada"; EstadoEvidencia.Rechazada -> "Rechazada" }
-    val icon  = when (estado) { EstadoEvidencia.Pendiente -> Icons.Default.Schedule; EstadoEvidencia.Aprobada -> Icons.Default.CheckCircle; EstadoEvidencia.Rechazada -> Icons.Default.Cancel }
-    val container = when (estado) { EstadoEvidencia.Pendiente -> MaterialTheme.colorScheme.secondaryContainer; EstadoEvidencia.Aprobada -> MaterialTheme.colorScheme.tertiaryContainer; EstadoEvidencia.Rechazada -> MaterialTheme.colorScheme.errorContainer }
-    val content   = when (estado) { EstadoEvidencia.Pendiente -> MaterialTheme.colorScheme.onSecondaryContainer; EstadoEvidencia.Aprobada -> MaterialTheme.colorScheme.onTertiaryContainer; EstadoEvidencia.Rechazada -> MaterialTheme.colorScheme.onErrorContainer }
-    SuggestionChip(onClick = {}, label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                   icon = { Icon(icon, null, Modifier.size(AssistChipDefaults.IconSize)) },
-                   colors = SuggestionChipDefaults.suggestionChipColors(containerColor = container, labelColor = content, iconContentColor = content),
-                   border = null)
-}
 
 @Preview(name = "Home Alumno Movil", showBackground = true, showSystemUi = true, widthDp = 360, heightDp = 800)
 @Composable

@@ -5,20 +5,77 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.navArgument
 import com.pmlp.edutask.model.RolUsuario
+import com.pmlp.edutask.model.Tarea
+import com.pmlp.edutask.ui.EventosSharedViewModel
 import com.pmlp.edutask.ui.alumno.HomeAlumnoScreen
+import com.pmlp.edutask.ui.alumno.EnviarEvidenciaScreen
+import com.pmlp.edutask.ui.coordinador.CoordinadorViewModel
+import com.pmlp.edutask.ui.coordinador.FormularioUsuarioScreen
+import com.pmlp.edutask.ui.coordinador.HomeCoordinadorScreen
+import com.pmlp.edutask.ui.coordinador.ListaUsuariosScreen
+import com.pmlp.edutask.ui.coordinador.FormularioEventoScreen
+import com.pmlp.edutask.ui.coordinador.ListaEventosScreen
 import com.pmlp.edutask.ui.login.LoginScreen
 import com.pmlp.edutask.ui.profesor.HomeProfesorScreen
+import com.pmlp.edutask.ui.profesor.CrearTareaScreen
+import com.pmlp.edutask.ui.profesor.EvaluarTareaScreen
+import com.pmlp.edutask.ui.profesor.AlumnosClaseScreen
+import com.pmlp.edutask.ui.profesor.EstadisticasTareaScreen
+import java.util.Date
 
 object EduTaskRoutes {
-    const val LOGIN         = "login"
-    const val HOME_ALUMNO   = "home_alumno/{nombre}/{carrera}"
-    const val HOME_PROFESOR = "home_profesor/{nombre}/{clase}"
+    const val LOGIN           = "login"
+    const val HOME_ALUMNO     = "home_alumno/{idUsuario}/{nombre}/{carrera}"
+    const val HOME_PROFESOR   = "home_profesor/{idUsuario}/{nombre}/{clase}"
+    const val HOME_COORDINADOR = "home_coordinador/{idUsuario}/{nombre}"
+    const val LISTA_USUARIOS  = "lista_usuarios/{filtro}"
+    const val FORMULARIO_USUARIO = "formulario_usuario?idUsuario={idUsuario}"
+    const val LISTA_EVENTOS = "lista_eventos"
+    const val FORMULARIO_EVENTO = "formulario_evento?idEvento={idEvento}"
+    const val ENVIAR_EVIDENCIA =
+        "enviar_evidencia/{idAsignacion}/{idTarea}/{titulo}/{descripcion}/{fechaLimite}/{nombreClase}/{nombreAlumno}?idEvidencia={idEvidencia}"
+    const val CREAR_TAREA   = "crear_tarea/{idUsuario}?idTarea={idTarea}"
+    const val EVALUAR_TAREA = "evaluar_tarea/{idEvidencia}/{idUsuario}"
+    const val ALUMNOS_CLASE = "alumnos_clase/{idClase}/{nombreClase}"
+    const val ESTADISTICAS_TAREA = "estadisticas_tarea/{idTarea}/{tituloTarea}"
 
-    fun homeAlumno(nombre: String, carrera: String)  = "home_alumno/${enc(nombre)}/${enc(carrera)}"
-    fun homeProfesor(nombre: String, clase: String)  = "home_profesor/${enc(nombre)}/${enc(clase)}"
-    private fun enc(s: String) = s.replace(" ", "_").replace(".", "-")
-    fun dec(s: String?) = s?.replace("_", " ")?.replace("-", ".") ?: ""
+    fun homeAlumno(idUsuario: String, nombre: String, carrera: String) =
+        "home_alumno/${enc(idUsuario)}/${enc(nombre)}/${enc(carrera)}"
+
+    fun homeProfesor(idUsuario: String, nombre: String, clase: String) =
+        "home_profesor/${enc(idUsuario)}/${enc(nombre)}/${enc(clase)}"
+
+    fun homeCoordinador(idUsuario: String, nombre: String) =
+        "home_coordinador/${enc(idUsuario)}/${enc(nombre)}"
+
+    fun listaUsuarios(filtro: String) = "lista_usuarios/${enc(filtro)}"
+
+    fun formularioUsuario(idUsuario: String? = null) =
+        if (idUsuario != null) "formulario_usuario?idUsuario=${enc(idUsuario)}" else "formulario_usuario"
+
+    fun formularioEvento(idEvento: String? = null) =
+        if (idEvento != null) "formulario_evento?idEvento=${enc(idEvento)}" else "formulario_evento"
+
+    fun enviarEvidencia(
+        idAsignacion: String,
+        tarea:        Tarea,
+        nombreAlumno: String,
+        idEvidencia:  String? = null
+    ) = "enviar_evidencia/${enc(idAsignacion)}/${enc(tarea.idTarea)}/${enc(tarea.titulo)}" +
+        "/${enc(tarea.descripcion)}/${tarea.fechaLimite.time}" +
+        "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}" +
+        if (idEvidencia != null) "?idEvidencia=${enc(idEvidencia)}" else ""
+
+    fun crearTarea(idUsuario: String, idTarea: String? = null)  = "crear_tarea/${enc(idUsuario)}" + if (idTarea != null) "?idTarea=${enc(idTarea)}" else ""
+    fun evaluarTarea(idEvidencia: String, idUsuario: String)  = "evaluar_tarea/${enc(idEvidencia)}/${enc(idUsuario)}"
+    fun alumnosClase(idClase: String, nombreClase: String)  = "alumnos_clase/${enc(idClase)}/${enc(nombreClase)}"
+    fun estadisticasTarea(idTarea: String, tituloTarea: String)  = "estadisticas_tarea/${enc(idTarea)}/${enc(tituloTarea)}"
+
+    fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
+    fun dec(s: String?): String = if (s != null) java.net.URLDecoder.decode(s, "UTF-8") else ""
 }
 
 @Composable
@@ -26,31 +83,193 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
     NavHost(navController = navController, startDestination = EduTaskRoutes.LOGIN) {
 
         composable(EduTaskRoutes.LOGIN) {
-            LoginScreen(onLoginSuccess = { rol ->
+            LoginScreen(onLoginSuccess = { idUsuario, nombre, rol ->
                 val route = when (rol) {
-                    RolUsuario.Alumno      -> EduTaskRoutes.homeAlumno("Juan Ramirez", "Ingenieria de Software")
-                    RolUsuario.Profesor    -> EduTaskRoutes.homeProfesor("Mtro Perez", "Programacion Movil PMLP")
-                    RolUsuario.Coordinador -> EduTaskRoutes.homeProfesor("Coord Garcia", "Coordinacion Academica")
+                    RolUsuario.Alumno      -> EduTaskRoutes.homeAlumno(idUsuario, nombre, "Ingenieria de Software")
+                    RolUsuario.Profesor    -> EduTaskRoutes.homeProfesor(idUsuario, nombre, "Programacion Movil PMLP")
+                    RolUsuario.Coordinador -> EduTaskRoutes.homeCoordinador(idUsuario, nombre)
                 }
                 navController.navigate(route) { popUpTo(EduTaskRoutes.LOGIN) { inclusive = true } }
             })
         }
 
         composable(EduTaskRoutes.HOME_ALUMNO) { back ->
+            val nombreAlumno = EduTaskRoutes.dec(back.arguments?.getString("nombre"))
+            val idUsuario    = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
             HomeAlumnoScreen(
-                nombreAlumno     = EduTaskRoutes.dec(back.arguments?.getString("nombre")),
-                carrera          = EduTaskRoutes.dec(back.arguments?.getString("carrera")),
-                onSubirEvidencia = {},
-                onLogout         = { navController.navigate(EduTaskRoutes.LOGIN) { popUpTo(0) { inclusive = true } } }
+                idUsuario    = idUsuario,
+                nombreAlumno = nombreAlumno,
+                carrera      = EduTaskRoutes.dec(back.arguments?.getString("carrera")),
+                onVerTarea   = { item ->
+                    navController.navigate(
+                        EduTaskRoutes.enviarEvidencia(item.idAsignacion, item.tarea, nombreAlumno, item.idEvidencia)
+                    )
+                },
+                onLogout = {
+                    navController.navigate(EduTaskRoutes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
 
         composable(EduTaskRoutes.HOME_PROFESOR) { back ->
+            val idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
             HomeProfesorScreen(
+                idUsuario      = idUsuario,
                 nombreProfesor = EduTaskRoutes.dec(back.arguments?.getString("nombre")),
                 claseActual    = EduTaskRoutes.dec(back.arguments?.getString("clase")),
-                onCrearTarea   = {},
+                onCrearTarea   = { idUser, idTar ->
+                    navController.navigate(EduTaskRoutes.crearTarea(idUser, idTar))
+                },
+                onVerEvidencia = { idEvidencia ->
+                    navController.navigate(EduTaskRoutes.evaluarTarea(idEvidencia, idUsuario))
+                },
+                onVerAlumnos = { idClase, nombreClase ->
+                    navController.navigate(EduTaskRoutes.alumnosClase(idClase, nombreClase))
+                },
+                onVerEstadisticas = { idTarea, titulo ->
+                    navController.navigate(EduTaskRoutes.estadisticasTarea(idTarea, titulo))
+                },
                 onLogout       = { navController.navigate(EduTaskRoutes.LOGIN) { popUpTo(0) { inclusive = true } } }
+            )
+        }
+
+        composable(
+            route = EduTaskRoutes.ENVIAR_EVIDENCIA,
+            arguments = listOf(
+                navArgument("idEvidencia") { nullable = true; defaultValue = null }
+            )
+        ) { back ->
+            val args = back.arguments
+            val tarea = Tarea(
+                idTarea     = EduTaskRoutes.dec(args?.getString("idTarea")),
+                titulo      = EduTaskRoutes.dec(args?.getString("titulo")),
+                descripcion = EduTaskRoutes.dec(args?.getString("descripcion")),
+                fechaLimite = Date(args?.getString("fechaLimite")?.toLongOrNull() ?: System.currentTimeMillis()),
+                idClase     = "",
+                nombreClase = EduTaskRoutes.dec(args?.getString("nombreClase"))
+            )
+            EnviarEvidenciaScreen(
+                tarea        = tarea,
+                idAsignacion = EduTaskRoutes.dec(args?.getString("idAsignacion")),
+                nombreAlumno = EduTaskRoutes.dec(args?.getString("nombreAlumno")),
+                idEvidenciaRecibida = args?.getString("idEvidencia")?.let { EduTaskRoutes.dec(it) },
+                onBack       = { navController.popBackStack() }
+            )
+        }
+
+        composable(EduTaskRoutes.HOME_COORDINADOR) { back ->
+            HomeCoordinadorScreen(
+                idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario")),
+                nombreCoordinador = EduTaskRoutes.dec(back.arguments?.getString("nombre")),
+                onNavigateToLista = { filtro -> navController.navigate(EduTaskRoutes.listaUsuarios(filtro)) },
+                onNavigateToEventos = { navController.navigate(EduTaskRoutes.LISTA_EVENTOS) },
+                onLogout = { navController.navigate(EduTaskRoutes.LOGIN) { popUpTo(0) { inclusive = true } } }
+            )
+        }
+
+        composable(EduTaskRoutes.LISTA_USUARIOS) { back ->
+            val viewModel: CoordinadorViewModel = viewModel()
+            ListaUsuariosScreen(
+                viewModel = viewModel,
+                filtroInicial = EduTaskRoutes.dec(back.arguments?.getString("filtro")),
+                onBack = { navController.popBackStack() },
+                onNavigateToFormulario = { id -> navController.navigate(EduTaskRoutes.formularioUsuario(id)) }
+            )
+        }
+
+        composable(
+            route = EduTaskRoutes.FORMULARIO_USUARIO,
+            arguments = listOf(navArgument("idUsuario") { nullable = true; defaultValue = null })
+        ) { back ->
+            val viewModel: CoordinadorViewModel = viewModel()
+            val idUsuarioStr = back.arguments?.getString("idUsuario")
+            val idUsuario = if (!idUsuarioStr.isNullOrEmpty()) EduTaskRoutes.dec(idUsuarioStr) else null
+            FormularioUsuarioScreen(
+                viewModel = viewModel,
+                idUsuario = idUsuario,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(EduTaskRoutes.LISTA_EVENTOS) {
+            val viewModel: EventosSharedViewModel = viewModel()
+            ListaEventosScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToFormulario = { id -> navController.navigate(EduTaskRoutes.formularioEvento(id)) }
+            )
+        }
+
+        composable(
+            route = EduTaskRoutes.FORMULARIO_EVENTO,
+            arguments = listOf(navArgument("idEvento") { nullable = true; defaultValue = null })
+        ) { back ->
+            val viewModel: EventosSharedViewModel = viewModel()
+            val idEventoStr = back.arguments?.getString("idEvento")
+            val idEvento = if (!idEventoStr.isNullOrEmpty()) EduTaskRoutes.dec(idEventoStr) else null
+            FormularioEventoScreen(
+                viewModel = viewModel,
+                idEvento = idEvento,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = EduTaskRoutes.CREAR_TAREA,
+            arguments = listOf(
+                navArgument("idTarea") {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { back ->
+            val idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
+            val idTarea = back.arguments?.getString("idTarea")?.let { EduTaskRoutes.dec(it) }
+            CrearTareaScreen(
+                idUsuario = idUsuario,
+                idTarea = idTarea,
+                onTareaCreadaExitosa = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(EduTaskRoutes.EVALUAR_TAREA) { back ->
+            val idEvidencia = EduTaskRoutes.dec(back.arguments?.getString("idEvidencia"))
+            val idUsuario = EduTaskRoutes.dec(back.arguments?.getString("idUsuario"))
+            EvaluarTareaScreen(
+                idEvidencia = idEvidencia,
+                idUsuario = idUsuario,
+                onEvaluadoExitoso = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(EduTaskRoutes.ALUMNOS_CLASE) { back ->
+            val idClase = EduTaskRoutes.dec(back.arguments?.getString("idClase"))
+            val nombreClase = EduTaskRoutes.dec(back.arguments?.getString("nombreClase"))
+            AlumnosClaseScreen(
+                idClase = idClase,
+                nombreClase = nombreClase,
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(EduTaskRoutes.ESTADISTICAS_TAREA) { back ->
+            val idTarea = EduTaskRoutes.dec(back.arguments?.getString("idTarea"))
+            val tituloTarea = EduTaskRoutes.dec(back.arguments?.getString("tituloTarea"))
+            EstadisticasTareaScreen(
+                idTarea = idTarea,
+                tituloTarea = tituloTarea,
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
     }

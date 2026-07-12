@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Rutas en caché interna para las fotos capturadas por la cámara -->
+    <cache-path name="camera_images" path="camera/" />
+    <!-- Rutas en caché externa para compatibilidad con emuladores y ROMs específicas -->
+    <external-cache-path name="external_camera_images" path="camera/" />
+</paths>

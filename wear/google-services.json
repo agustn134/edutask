@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "887804414784",
+    "project_id": "edutask-cmpm-alp",
+    "storage_bucket": "edutask-cmpm-alp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:887804414784:android:434c628fb622b957ee08a5",
+        "android_client_info": {
+          "package_name": "com.pmlp.wear"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcHBkrRY-RLmWWUDeVbhA7YFotPQthFfQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
