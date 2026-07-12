@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pmlp.edutask.model.Evento
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.text.style.TextOverflow
+import com.pmlp.edutask.ui.components.EmptyStateIllustration
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,7 +85,7 @@ fun InicioContent(
                     OutlinedTextField(
                         value = codigoClase,
                         onValueChange = { codigoClase = it },
-                        label = { Text("Código de clase (Ej. ZJB97S)") },
+                        label = { Text("Código de clase.") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -111,10 +113,16 @@ fun InicioContent(
             }
         }
         
-        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente }.take(3)
+        val now = java.util.Date()
+        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }.take(3)
         if (proximasTareas.isEmpty()) {
             item {
-                Text("No hay tareas próximas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                EmptyStateIllustration(
+                    icon = Icons.Default.TaskAlt,
+                    title = "¡Todo al día!",
+                    subtitle = "Puedes relajarte, no hay tareas próximas.",
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         } else {
             items(proximasTareas, key = { it.idAsignacion }) { item -> TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) }

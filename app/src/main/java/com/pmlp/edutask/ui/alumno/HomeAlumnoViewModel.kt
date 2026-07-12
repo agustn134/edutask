@@ -12,6 +12,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.Date
+import android.content.Context
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import java.util.concurrent.TimeUnit
+import com.pmlp.edutask.worker.TareaReminderWorker
 
 data class TareaItem(
     val tarea: Tarea,
@@ -38,6 +45,9 @@ class HomeAlumnoViewModel : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _correo = MutableStateFlow("")
+    val correo: StateFlow<String> = _correo.asStateFlow()
 
     private val db = FirebaseFirestore.getInstance()
 
@@ -68,6 +78,10 @@ class HomeAlumnoViewModel : ViewModel() {
         evidenciasListeners.forEach { it.remove() }
         evidenciasListeners.clear()
 
+        db.collection("usuarios").document(idUsuario).get().addOnSuccessListener { doc ->
+            _correo.value = doc.getString("correo") ?: ""
+        }
+
         _uiState.value = HomeAlumnoState.Loading
         loadData(idUsuario)
     }
@@ -80,6 +94,50 @@ class HomeAlumnoViewModel : ViewModel() {
             loadData(idUsuario)
             _isRefreshing.value = false
         }
+    }
+
+    fun updateAccount(idUsuario: String, nuevoCorreo: String, nuevaContrasena: String, onComplete: (Boolean) -> Unit) {
+        val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
+        if (nuevaContrasena.isNotBlank()) {
+            updates["contrasena"] = nuevaContrasena
+        }
+        db.collection("usuarios").document(idUsuario).update(updates)
+            .addOnSuccessListener {
+                _correo.value = nuevoCorreo
+                onComplete(true)
+            }
+            .addOnFailureListener {
+                onComplete(false)
+            }
+    }
+
+    fun scheduleReminders(context: Context, tareas: List<TareaItem>) {
+        val now = System.currentTimeMillis()
+        val twoHoursInMillis = 2 * 60 * 60 * 1000L
+
+        tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null }
+            .forEach { item ->
+                val timeRemaining = item.tarea.fechaLimite.time - now
+                if (timeRemaining > twoHoursInMillis) {
+                    val delay = timeRemaining - twoHoursInMillis
+                    
+                    val inputData = Data.Builder()
+                        .putString("TAREA_NOMBRE", item.tarea.titulo)
+                        .putString("TAREA_ID", item.tarea.idTarea)
+                        .build()
+
+                    val workRequest = OneTimeWorkRequestBuilder<TareaReminderWorker>()
+                        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                        .setInputData(inputData)
+                        .build()
+
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        "reminder_${item.tarea.idTarea}",
+                        ExistingWorkPolicy.REPLACE,
+                        workRequest
+                    )
+                }
+            }
     }
 
     private fun loadData(idUsuario: String) {

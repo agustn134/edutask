@@ -248,8 +248,15 @@ fun EvaluarTareaScreen(
                                         Spacer(Modifier.width(8.dp))
                                         val ctx = LocalContext.current
                                         TextButton(onClick = {
-                                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link))
-                                            ctx.startActivity(intent)
+                                            val url = if (!link.startsWith("http://") && !link.startsWith("https://")) {
+                                                "https://$link"
+                                            } else link
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                                ctx.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                // Ignore or log
+                                            }
                                         }, contentPadding = PaddingValues(0.dp)) {
                                             Text(link, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                                         }

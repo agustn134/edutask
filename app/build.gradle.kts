@@ -69,4 +69,5 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     // Storage lo agregaremos aquí mismo cuando lleguemos a esa fase
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

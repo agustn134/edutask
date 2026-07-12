@@ -2,18 +2,26 @@ package com.pmlp.edutask.ui.alumno
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
+import com.pmlp.edutask.ui.components.EmptyStateIllustration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.ui.Alignment
-import java.text.SimpleDateFormat
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.animateContentSize
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,78 +44,170 @@ fun CalificacionesContent(
             item { Text("Mis Calificaciones", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
             
             val tareasEvaluadas = tareas.filter { it.estado != EstadoEvidencia.Pendiente }
-            if (tareasEvaluadas.isEmpty()) {
-                item { Text("Aún no tienes calificaciones.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            val tareasPorClase = tareasEvaluadas.groupBy { it.tarea.nombreClase }
+
+            if (tareasPorClase.isEmpty()) {
+                item {
+                    EmptyStateIllustration(
+                        icon = Icons.Default.FactCheck,
+                        title = "Sin Calificaciones",
+                        subtitle = "Aún no tienes tareas calificadas. ¡Sigue entregando tus trabajos!",
+                        modifier = Modifier.padding(top = 40.dp)
+                    )
+                }
             } else {
-                items(tareasEvaluadas, key = { it.idAsignacion }) { item -> 
-                    CalificacionCard(item, onVerTarea) 
+                tareasPorClase.forEach { (nombreClase, tareasClase) ->
+                    item(key = nombreClase) {
+                        ClaseGradesAccordion(nombreClase, tareasClase, onVerTarea)
+                    }
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, onVerTarea: (TareaItem) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val calificacionPromedio = tareas.mapNotNull { it.calificacion }.average()
+    val promedioStr = if (calificacionPromedio.isNaN()) "-" else String.format(Locale.getDefault(), "%.1f", calificacionPromedio)
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        onClick = { expanded = !expanded },
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = nombreClase.firstOrNull()?.toString()?.uppercase() ?: "",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = nombreClase, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = "${tareas.size} tarea(s) evaluada(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$promedioStr / 10", 
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text("Promedio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Colapsar" else "Expandir",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            if (expanded) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    tareas.forEach { item ->
+                        CalificacionCard(item = item, onClick = onVerTarea)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalificacionCard(item: TareaItem, onClick: (TareaItem) -> Unit) {
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     val calificacionStr = item.calificacion?.toString() ?: "-"
     
-    val containerColor = if (item.estado == EstadoEvidencia.Aprobada) 
-        MaterialTheme.colorScheme.tertiaryContainer 
-    else 
-        MaterialTheme.colorScheme.errorContainer
-        
-    val contentColor = if (item.estado == EstadoEvidencia.Aprobada) 
-        MaterialTheme.colorScheme.onTertiaryContainer 
-    else 
-        MaterialTheme.colorScheme.onErrorContainer
+    val isAprobada = item.estado == EstadoEvidencia.Aprobada
+    val iconColor = if (isAprobada) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
 
     Card(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        onClick = { onClick(item) }
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        onClick = { onClick(item) },
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(20.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = item.tarea.titulo, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(text = "Clase: ${item.tarea.nombreClase}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = item.tarea.titulo, 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.SemiBold, 
+                    maxLines = 2, 
+                    overflow = TextOverflow.Ellipsis
+                )
                 
                 if (!item.comentario.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Comentario: ${item.comentario}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = item.comentario,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = containerColor,
-                contentColor = contentColor,
-                shadowElevation = 2.dp
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(Icons.Default.Star, contentDescription = "Calificación", modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$calificacionStr / 10",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Text(
+                    text = calificacionStr,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = iconColor
+                )
+                Text(
+                    text = "/ 10",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
