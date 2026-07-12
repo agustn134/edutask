@@ -83,7 +83,7 @@ fun InicioContent(
                     OutlinedTextField(
                         value = codigoClase,
                         onValueChange = { codigoClase = it },
-                        label = { Text("Código de clase (Ej. ZJB97S)") },
+                        label = { Text("Código de clase.") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -111,7 +111,8 @@ fun InicioContent(
             }
         }
         
-        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente }.take(3)
+        val now = java.util.Date()
+        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }.take(3)
         if (proximasTareas.isEmpty()) {
             item {
                 Text("No hay tareas próximas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -33,7 +33,9 @@ data class EvidenciaEnviadaData(
     val textoEvidencia: String?,
     val fotoBase64: String?,
     val archivos: List<Map<String, String>>,
-    val vinculos: List<String>
+    val vinculos: List<String>,
+    val comentarioProfesor: String? = null,
+    val calificacionProfesor: Int? = null
 )
 
 data class ArchivoSubir(
@@ -62,14 +64,31 @@ class EnviarEvidenciaViewModel : ViewModel() {
             try {
                 val doc = db.collection("evidencias_tarea").document(idEvidencia).get().await()
                 if (doc.exists()) {
+                    val estado = doc.getString("estado") ?: "Pendiente"
+                    var comentarioProfesor: String? = null
+                    var calificacionProfesor: Int? = null
+
+                    if (estado != "Pendiente") {
+                        val califSnapshot = db.collection("calificaciones")
+                            .whereEqualTo("idEvidencia", idEvidencia)
+                            .get().await()
+                        if (!califSnapshot.isEmpty) {
+                            val califDoc = califSnapshot.documents[0]
+                            comentarioProfesor = califDoc.getString("comentario")
+                            calificacionProfesor = califDoc.getLong("valor")?.toInt()
+                        }
+                    }
+
                     _evidenciaEnviada.value = EvidenciaEnviadaData(
                         idEvidencia = doc.id,
-                        estado = doc.getString("estado") ?: "Pendiente",
+                        estado = estado,
                         nombreArchivo = doc.getString("nombreArchivo"),
                         textoEvidencia = doc.getString("textoEvidencia"),
                         fotoBase64 = doc.getString("fotoBase64"),
                         archivos = (doc.get("archivos") as? List<Map<String, String>>) ?: emptyList(),
-                        vinculos = (doc.get("vinculos") as? List<String>) ?: emptyList()
+                        vinculos = (doc.get("vinculos") as? List<String>) ?: emptyList(),
+                        comentarioProfesor = comentarioProfesor,
+                        calificacionProfesor = calificacionProfesor
                     )
                 }
             } catch (e: Exception) {
