@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
+import com.pmlp.edutask.ui.components.EmptyStateIllustration
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Tab
 import java.text.SimpleDateFormat
@@ -120,14 +121,17 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
             // Lista de Tareas o Estado Vacío
             if (currentTareas.isEmpty()) {
                 item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(Icons.Default.CheckCircleOutline, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.surfaceVariant)
-                        Text("No hay tareas en esta categoría.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val (icon, title, subtitle) = when (selectedTabIndex) {
+                        0 -> Triple(Icons.Default.TaskAlt, "Sin Tareas Pendientes", "¡Estás al día con tus entregas!")
+                        1 -> Triple(Icons.Default.PendingActions, "Aún No Hay Entregas", "Cuando entregues tus tareas, aparecerán aquí.")
+                        else -> Triple(Icons.Default.FactCheck, "Sin Tareas Evaluadas", "Tus calificaciones aparecerán aquí cuando el profesor revise.")
                     }
+                    EmptyStateIllustration(
+                        icon = icon,
+                        title = title,
+                        subtitle = subtitle,
+                        modifier = Modifier.padding(top = 40.dp)
+                    )
                 }
             } else {
                 items(currentTareas, key = { it.idAsignacion }) { item -> 

@@ -27,6 +27,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
@@ -66,9 +71,29 @@ fun HomeAlumnoScreen(
     val correoAlumno by viewModel.correo.collectAsState()
     val eventosState by eventosViewModel.uiState.collectAsState()
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permiso concedido, el WorkManager podrá enviar notificaciones
+        }
+    }
+
     LaunchedEffect(idUsuario) {
         viewModel.fetchUserData(idUsuario)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
         eventosViewModel.fetchEventos()
+    }
+    
+    // Agendar recordatorios si los datos se cargaron
+    LaunchedEffect(uiState) {
+        if (uiState is HomeAlumnoState.Success) {
+            viewModel.scheduleReminders(context, (uiState as HomeAlumnoState.Success).tareas)
+        }
     }
 
     val now = java.util.Date()

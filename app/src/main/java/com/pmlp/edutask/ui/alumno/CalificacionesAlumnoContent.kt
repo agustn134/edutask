@@ -2,12 +2,12 @@ package com.pmlp.edutask.ui.alumno
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
+import com.pmlp.edutask.ui.components.EmptyStateIllustration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
@@ -15,13 +15,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateContentSize
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,10 +44,18 @@ fun CalificacionesContent(
             item { Text("Mis Calificaciones", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
             
             val tareasEvaluadas = tareas.filter { it.estado != EstadoEvidencia.Pendiente }
-            if (tareasEvaluadas.isEmpty()) {
-                item { Text("Aún no tienes calificaciones.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            val tareasPorClase = tareasEvaluadas.groupBy { it.tarea.nombreClase }
+
+            if (tareasPorClase.isEmpty()) {
+                item {
+                    EmptyStateIllustration(
+                        icon = Icons.Default.FactCheck,
+                        title = "Sin Calificaciones",
+                        subtitle = "Aún no tienes tareas calificadas. ¡Sigue entregando tus trabajos!",
+                        modifier = Modifier.padding(top = 40.dp)
+                    )
+                }
             } else {
-                val tareasPorClase = tareasEvaluadas.groupBy { it.tarea.nombreClase }
                 tareasPorClase.forEach { (nombreClase, tareasClase) ->
                     item(key = nombreClase) {
                         ClaseGradesAccordion(nombreClase, tareasClase, onVerTarea)
