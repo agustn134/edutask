@@ -10,8 +10,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.tasks.await
 import java.util.Date
+import android.content.Context
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import java.util.concurrent.TimeUnit
+import com.pmlp.edutask.worker.TareaReminderWorker
 
 data class TareaItem(
     val tarea: Tarea,
@@ -38,6 +46,9 @@ class HomeAlumnoViewModel : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private val _correo = MutableStateFlow("")
+    val correo: StateFlow<String> = _correo.asStateFlow()
 
     private val db = FirebaseFirestore.getInstance()
 
@@ -68,6 +79,10 @@ class HomeAlumnoViewModel : ViewModel() {
         evidenciasListeners.forEach { it.remove() }
         evidenciasListeners.clear()
 
+        db.collection("usuarios").document(idUsuario).get().addOnSuccessListener { doc ->
+            _correo.value = doc.getString("correo") ?: ""
+        }
+
         _uiState.value = HomeAlumnoState.Loading
         loadData(idUsuario)
     }
@@ -80,6 +95,50 @@ class HomeAlumnoViewModel : ViewModel() {
             loadData(idUsuario)
             _isRefreshing.value = false
         }
+    }
+
+    fun updateAccount(idUsuario: String, nuevoCorreo: String, nuevaContrasena: String, onComplete: (Boolean) -> Unit) {
+        val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
+        if (nuevaContrasena.isNotBlank()) {
+            updates["contrasena"] = nuevaContrasena
+        }
+        db.collection("usuarios").document(idUsuario).update(updates)
+            .addOnSuccessListener {
+                _correo.value = nuevoCorreo
+                onComplete(true)
+            }
+            .addOnFailureListener {
+                onComplete(false)
+            }
+    }
+
+    fun scheduleReminders(context: Context, tareas: List<TareaItem>) {
+        val now = System.currentTimeMillis()
+        val twoHoursInMillis = 2 * 60 * 60 * 1000L
+
+        tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null }
+            .forEach { item ->
+                val timeRemaining = item.tarea.fechaLimite.time - now
+                if (timeRemaining > twoHoursInMillis) {
+                    val delay = timeRemaining - twoHoursInMillis
+                    
+                    val inputData = Data.Builder()
+                        .putString("TAREA_NOMBRE", item.tarea.titulo)
+                        .putString("TAREA_ID", item.tarea.idTarea)
+                        .build()
+
+                    val workRequest = OneTimeWorkRequestBuilder<TareaReminderWorker>()
+                        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                        .setInputData(inputData)
+                        .build()
+
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        "reminder_${item.tarea.idTarea}",
+                        ExistingWorkPolicy.REPLACE,
+                        workRequest
+                    )
+                }
+            }
     }
 
     private fun loadData(idUsuario: String) {
@@ -111,99 +170,126 @@ class HomeAlumnoViewModel : ViewModel() {
                         evidenciasListeners.forEach { it.remove() }
                         evidenciasListeners.clear()
 
-                        for (asignacionDoc in snapshot.documents) {
-                            val idAsignacion = asignacionDoc.id
-                            val idTarea = asignacionDoc.getString("idTarea") ?: continue
-
-                            // 2. Fetch Tarea
-                            val tarea = if (tareasCache.containsKey(idTarea)) {
-                                tareasCache[idTarea]!!
-                            } else {
+                        val asignacionesSnapshot = snapshot.documents
+                        
+                        // 2. Fetch all Tareas and Clases efficiently using async map
+                        val tareasMapDeferred = asignacionesSnapshot.map { asignacionDoc ->
+                            val idTarea = asignacionDoc.getString("idTarea") ?: return@map null
+                            if (tareasCache.containsKey(idTarea)) return@map tareasCache[idTarea]
+                            viewModelScope.async {
                                 val tareaDoc = db.collection("tareas").document(idTarea).get().await()
-                                if (!tareaDoc.exists()) continue
-                                
+                                if (!tareaDoc.exists()) return@async null
                                 val idClase = tareaDoc.getString("idClase") ?: ""
                                 val titulo = tareaDoc.getString("titulo") ?: ""
                                 val desc = tareaDoc.getString("descripcion") ?: ""
-                                val fechaTimestamp = tareaDoc.getTimestamp("fechaLimite")
-                                val fecha = fechaTimestamp?.toDate() ?: java.util.Date()
-
-                                // 3. Fetch Clase
-                                val nombreClase = if (clasesCache.containsKey(idClase)) {
-                                    clasesCache[idClase]!!
-                                } else {
-                                    val claseDoc = db.collection("clases").document(idClase).get().await()
-                                    val nombre = claseDoc.getString("nombre") ?: "Sin Clase"
-                                    clasesCache[idClase] = nombre
-                                    nombre
+                                val fecha = tareaDoc.getTimestamp("fechaLimite")?.toDate() ?: java.util.Date()
+                                val nombreClase = clasesCache.getOrPut(idClase) {
+                                    db.collection("clases").document(idClase).get().await().getString("nombre") ?: "Sin Clase"
                                 }
-
                                 val t = Tarea(idTarea, titulo, desc, fecha, idClase, nombreClase)
                                 tareasCache[idTarea] = t
                                 t
                             }
-                            
-                            clasesSet.add(tarea.nombreClase)
+                        }
+                        
+                        val tareasList = tareasMapDeferred.mapNotNull { if (it is kotlinx.coroutines.Deferred<*>) (it as kotlinx.coroutines.Deferred<Tarea?>).await() else it as Tarea? }
+                        
+                        // Populate classes set
+                        tareasList.forEach { clasesSet.add(it.nombreClase) }
 
-                            // Estado inicial mientras se resuelve la evidencia
-                            paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion)
+                        // Map Asignacion -> Tarea
+                        val idAsignacionToTarea = asignacionesSnapshot.mapNotNull { doc -> 
+                            val idTarea = doc.getString("idTarea") ?: return@mapNotNull null
+                            val tarea = tareasCache[idTarea] ?: return@mapNotNull null
+                            doc.id to tarea
+                        }.toMap()
 
-                            // 4. Snapshot Listener para Evidencia
-                            val evListener = db.collection("evidencias_tarea")
-                                .whereEqualTo("idAsignacion", idAsignacion)
-                                .addSnapshotListener { evSnapshot, _ ->
-                                    if (evSnapshot != null && !evSnapshot.isEmpty) {
-                                        val evidenciaDoc = evSnapshot.documents[0]
-                                        val estadoStr = evidenciaDoc.getString("estado")
-                                        val idEvidencia = evidenciaDoc.id
-                                        
-                                        val estadoEvidencia = when (estadoStr) {
-                                            "Aprobada" -> EstadoEvidencia.Aprobada
-                                            "Rechazada" -> EstadoEvidencia.Rechazada
-                                            else -> EstadoEvidencia.Pendiente
-                                        }
-
-                                        // Si está evaluada, buscamos la calificación
-                                        if (estadoEvidencia != EstadoEvidencia.Pendiente) {
-                                            db.collection("calificaciones")
-                                                .whereEqualTo("idEvidencia", idEvidencia)
-                                                .get()
-                                                .addOnSuccessListener { califSnapshot ->
-                                                    var calificacion: Int? = null
-                                                    var comentario: String? = null
-                                                    if (!califSnapshot.isEmpty) {
-                                                        calificacion = califSnapshot.documents[0].getLong("valor")?.toInt()
-                                                        comentario = califSnapshot.documents[0].getString("comentario")
-                                                    }
-                                                    
-                                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario, idEvidencia)
-                                                    _uiState.value = HomeAlumnoState.Success(
-                                                        clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                                        tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
-                                                    )
-                                                }
-                                        } else {
-                                            paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, null, null, idEvidencia)
-                                            _uiState.value = HomeAlumnoState.Success(
-                                                clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                                tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
-                                            )
-                                        }
-                                    } else {
-                                        paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion, null, null, null)
-                                        _uiState.value = HomeAlumnoState.Success(
-                                            clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                                            tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
-                                        )
-                                    }
+                        // 3. Fetch all Evidencias using whereIn in chunks of 30
+                        val idAsignacionesList = idAsignacionToTarea.keys.toList()
+                        val evidenciasResult = mutableMapOf<String, com.google.firebase.firestore.DocumentSnapshot>()
+                        
+                        if (idAsignacionesList.isNotEmpty()) {
+                            val chunks = idAsignacionesList.chunked(30)
+                            for (chunk in chunks) {
+                                val evSnap = db.collection("evidencias_tarea").whereIn("idAsignacion", chunk).get().await()
+                                for (doc in evSnap.documents) {
+                                    val idAsig = doc.getString("idAsignacion")
+                                    if (idAsig != null) evidenciasResult[idAsig] = doc
                                 }
-                            evidenciasListeners.add(evListener)
+                            }
                         }
 
-                        // Emitimos éxito preliminar (se sobreescribirá si las evidencias cargan en milisegundos)
+                        // 4. Fetch all Calificaciones for evaluated evidences
+                        val evaluatedEvidenciaIds = evidenciasResult.values.filter { it.getString("estado") != "Pendiente" }
+                            .mapNotNull { 
+                                val idRaw = it.get("idEvidencia")
+                                when (idRaw) {
+                                    is Number -> idRaw.toLong().toString()
+                                    else -> idRaw?.toString() ?: it.id
+                                }
+                            }
+                        
+                        val calificacionesResult = mutableMapOf<String, com.google.firebase.firestore.DocumentSnapshot>()
+                        if (evaluatedEvidenciaIds.isNotEmpty()) {
+                            val chunks = evaluatedEvidenciaIds.chunked(30)
+                            for (chunk in chunks) {
+                                val califSnap = db.collection("calificaciones").whereIn("idEvidencia", chunk).get().await()
+                                for (doc in califSnap.documents) {
+                                    val idEvid = doc.getString("idEvidencia")
+                                    if (idEvid != null) calificacionesResult[idEvid] = doc
+                                }
+                            }
+                        }
+
+                        // 5. Build Final TareaItems
+                        idAsignacionToTarea.forEach { (idAsignacion, tarea) ->
+                            val evidenciaDoc = evidenciasResult[idAsignacion]
+                            if (evidenciaDoc != null) {
+                                val estadoStr = evidenciaDoc.getString("estado")
+                                val idEvidenciaRaw = evidenciaDoc.get("idEvidencia")
+                                val idEvidencia = when (idEvidenciaRaw) {
+                                    is Number -> idEvidenciaRaw.toLong().toString()
+                                    else -> idEvidenciaRaw?.toString() ?: evidenciaDoc.id
+                                }
+                                val estadoEvidencia = when (estadoStr) {
+                                    "Aprobada" -> EstadoEvidencia.Aprobada
+                                    "Rechazada" -> EstadoEvidencia.Rechazada
+                                    else -> EstadoEvidencia.Pendiente
+                                }
+                                
+                                if (estadoEvidencia != EstadoEvidencia.Pendiente) {
+                                    val califDoc = calificacionesResult[idEvidencia]
+                                    var calificacion: Int? = null
+                                    var comentario: String? = null
+                                    if (califDoc != null) {
+                                        val valorRaw = califDoc.get("valor")
+                                        calificacion = when (valorRaw) {
+                                            is Number -> valorRaw.toInt()
+                                            is String -> valorRaw.toIntOrNull()
+                                            else -> null
+                                        }
+                                        comentario = califDoc.getString("comentario")
+                                    }
+                                    if (calificacion == null) {
+                                        val califRaw = evidenciaDoc.get("calificacion")
+                                        calificacion = when (califRaw) {
+                                            is Number -> califRaw.toInt()
+                                            is String -> califRaw.toIntOrNull()
+                                            else -> null
+                                        }
+                                    }
+                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario, idEvidencia)
+                                } else {
+                                    paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, null, null, idEvidencia)
+                                }
+                            } else {
+                                paresTareasMap[idAsignacion] = TareaItem(tarea, EstadoEvidencia.Pendiente, idAsignacion, null, null, null)
+                            }
+                        }
+
                         _uiState.value = HomeAlumnoState.Success(
                             clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                            tareas = paresTareasMap.values.sortedBy { it.tarea.fechaLimite }
+                            tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite }
                         )
 
                     } catch (e: Exception) {
@@ -295,8 +381,10 @@ class HomeAlumnoViewModel : ViewModel() {
             val currentState = _uiState.value
             _uiState.value = HomeAlumnoState.Loading
             try {
-                // 1. Verificar si la clase existe
-                val claseDoc = db.collection("clases").document(codigoClase).get().await()
+                // 1. Normalizar y verificar si la clase existe
+                val codeNormalized = codigoClase.trim().uppercase()
+                val claseDoc = db.collection("clases").document(codeNormalized).get().await()
+
                 if (!claseDoc.exists()) {
                     _uiState.value = HomeAlumnoState.Error("El código de clase no existe o es incorrecto.")
                     return@launch
@@ -304,7 +392,7 @@ class HomeAlumnoViewModel : ViewModel() {
 
                 // 2. Verificar si el alumno ya está inscrito
                 val inscripciones = db.collection("clase_alumno")
-                    .whereEqualTo("idClase", codigoClase)
+                    .whereEqualTo("idClase", codeNormalized)
                     .whereEqualTo("idUsuario", idUsuario)
                     .get()
                     .await()
@@ -316,14 +404,14 @@ class HomeAlumnoViewModel : ViewModel() {
 
                 // 3. Inscribir al alumno
                 val nuevaInscripcion = hashMapOf(
-                    "idClase" to codigoClase,
+                    "idClase" to codeNormalized,
                     "idUsuario" to idUsuario
                 )
                 db.collection("clase_alumno").add(nuevaInscripcion).await()
 
                 // 4. Buscar tareas de la clase y crear asignaciones retroactivamente
                 val tareasSnapshot = db.collection("tareas")
-                    .whereEqualTo("idClase", codigoClase)
+                    .whereEqualTo("idClase", codeNormalized)
                     .get()
                     .await()
 

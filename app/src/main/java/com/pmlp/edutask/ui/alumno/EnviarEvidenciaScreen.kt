@@ -20,8 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -41,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pmlp.edutask.model.Tarea
 import com.pmlp.edutask.ui.theme.EduTaskTheme
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -49,6 +53,7 @@ import android.os.Build
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import android.provider.OpenableColumns
+import com.pmlp.edutask.ui.components.VisorArchivoDialog
 
 // ── Pantalla principal ───────────────────────────────────────────────────────
 
@@ -67,7 +72,11 @@ fun EnviarEvidenciaScreen(
     val evidenciaEnviada by viewModel.evidenciaEnviada.collectAsState()
     val isLoadingEvidencia by viewModel.isLoadingEvidencia.collectAsState()
 
+    val now = java.util.Date()
+    val isVencida = evidenciaEnviada == null && now.after(tarea.fechaLimite)
     val isReadOnlyMode = evidenciaEnviada != null
+
+    var visorData by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     LaunchedEffect(idEvidenciaRecibida) {
         if (idEvidenciaRecibida != null) {
@@ -75,21 +84,58 @@ fun EnviarEvidenciaScreen(
         }
     }
 
-    // Bitmap de la foto capturada (null = sin foto aún)
-    var fotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var archivosTarea by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    LaunchedEffect(tarea.idTarea) {
+        if (tarea.idTarea.isNotBlank()) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance().collection("tareas").document(tarea.idTarea).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        val rawArchivos = doc.get("archivos") as? List<*>
+                        val list = mutableListOf<Map<String, Any>>()
+                        rawArchivos?.forEach { item ->
+                            if (item is Map<*, *>) {
+                                val nombre = item["nombre"]?.toString() ?: ""
+                                val base64 = item["base64"]?.toString() ?: ""
+                                val esLink = item["esLink"] as? Boolean ?: false
+                                list.add(mapOf("nombre" to nombre, "base64" to base64, "esLink" to esLink))
+                            }
+                        }
+                        archivosTarea = list
+                    }
+                }
+        }
+    }
 
-    // Archivo genérico adjunto (para documentos no-imagen)
-    var archivoUri by remember { mutableStateOf<Uri?>(null) }
-    var nombreArchivo by remember { mutableStateOf<String?>(null) }
+    // ── Estados para Múltiples Archivos y Vínculos ───────────────────────────
+    var archivosSubir by remember { mutableStateOf(listOf<ArchivoSubir>()) }
+    var vinculos by remember { mutableStateOf(listOf<String>()) }
+    var nuevoVinculo by remember { mutableStateOf("") }
     var textoEvidencia by remember { mutableStateOf("") }
 
     // Rellenar estados si estamos en modo lectura
     val actualTexto = if (isReadOnlyMode) evidenciaEnviada?.textoEvidencia ?: "" else textoEvidencia
-    val actualNombreArchivo = if (isReadOnlyMode) evidenciaEnviada?.nombreArchivo else nombreArchivo
+    val actualVinculos = if (isReadOnlyMode) evidenciaEnviada?.vinculos ?: emptyList() else vinculos
+    val actualArchivosEnviados = if (isReadOnlyMode) evidenciaEnviada?.archivos ?: emptyList() else emptyList()
     
-    // Bitmap en modo lectura
-    val bitmapLectura = remember(evidenciaEnviada?.fotoBase64) {
-        evidenciaEnviada?.fotoBase64?.let { decodeBase64ToBitmap(it) }
+    // Bitmap en modo lectura (decodificado de forma asíncrona para no bloquear la UI) - LEGACY
+    val base64Foto = evidenciaEnviada?.fotoBase64
+    val actualNombreArchivoLegacy = evidenciaEnviada?.nombreArchivo
+    val bitmapLectura by produceState<Bitmap?>(initialValue = null, key1 = base64Foto) {
+        if (base64Foto != null) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                decodeBase64ToBitmap(base64Foto)
+            }
+        } else {
+            value = null
+        }
+    }
+
+    fun addArchivo(archivo: ArchivoSubir) {
+        if (archivosSubir.size < 3) {
+            archivosSubir = archivosSubir + archivo
+        } else {
+            Toast.makeText(context, "Máximo 3 archivos permitidos", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // URI temporal para escribir la foto de la cámara
@@ -99,9 +145,7 @@ fun EnviarEvidenciaScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            archivoUri = uri
-            fotoBitmap = null // limpiar foto si seleccionan archivo
-            nombreArchivo = getFileName(context, uri)
+            addArchivo(ArchivoSubir(uri = uri, nombre = getFileName(context, uri) ?: "documento"))
         }
     }
     
@@ -112,9 +156,10 @@ fun EnviarEvidenciaScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let { 
-            fotoBitmap = decodeUriToSafeBitmap(context, it) 
-            archivoUri = null
-            nombreArchivo = getFileName(context, it)
+            val bitmap = decodeUriToSafeBitmap(context, it)
+            if (bitmap != null) {
+                addArchivo(ArchivoSubir(bitmap = bitmap, nombre = getFileName(context, it) ?: "imagen.jpg"))
+            }
         }
     }
 
@@ -122,9 +167,10 @@ fun EnviarEvidenciaScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let { 
-            fotoBitmap = decodeUriToSafeBitmap(context, it) 
-            archivoUri = null
-            nombreArchivo = getFileName(context, it)
+            val bitmap = decodeUriToSafeBitmap(context, it)
+            if (bitmap != null) {
+                addArchivo(ArchivoSubir(bitmap = bitmap, nombre = getFileName(context, it) ?: "imagen.jpg"))
+            }
         }
     }
 
@@ -164,9 +210,10 @@ fun EnviarEvidenciaScreen(
     ) { success ->
         if (success) {
             fotoUri?.let { uri ->
-                fotoBitmap = decodeUriToSafeBitmap(context, uri)
-                archivoUri = null
-                nombreArchivo = "foto_camara.jpg"
+                val bitmap = decodeUriToSafeBitmap(context, uri)
+                if (bitmap != null) {
+                    addArchivo(ArchivoSubir(bitmap = bitmap, nombre = "foto_camara.jpg"))
+                }
             }
         }
     }
@@ -299,100 +346,92 @@ fun EnviarEvidenciaScreen(
                             }
                         }
                     } else {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // Botón Tomar Foto
-                        OutlinedButton(
-                            onClick = {
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                                    val uri = crearUriParaFoto(context)
-                                    fotoUri = uri
-                                    cameraLauncher.launch(uri)
-                                } else {
-                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        if (!isVencida) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                // Botón Tomar Foto
+                                OutlinedButton(
+                                    onClick = {
+                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                                            val uri = crearUriParaFoto(context)
+                                            fotoUri = uri
+                                            cameraLauncher.launch(uri)
+                                        } else {
+                                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape    = RoundedCornerShape(12.dp),
+                                    border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Cámara")
                                 }
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape    = RoundedCornerShape(12.dp),
-                            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Cámara")
-                        }
 
-                        // Botón Subir Galería (verifica permisos según versión Android)
-                        OutlinedButton(
-                            onClick = { abrirGaleria() },
-                            modifier = Modifier.weight(1f),
-                            shape    = RoundedCornerShape(12.dp),
-                            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Galería")
-                        }
-                    }
-
-                    // Botón Archivo (nuevo)
-                    OutlinedButton(
-                        onClick = { getFileLauncher.launch(arrayOf("*/*")) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape    = RoundedCornerShape(12.dp),
-                        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                    ) {
-                        Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Adjuntar Documento")
-                    }
-
-                    // Botón Enviar Evidencia
-                    Button(
-                        onClick = {
-                            var bytes: ByteArray? = null
-                            archivoUri?.let { uri ->
-                                try {
-                                    context.contentResolver.openInputStream(uri)?.use { input ->
-                                        bytes = input.readBytes()
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                                // Botón Subir Galería (verifica permisos según versión Android)
+                                OutlinedButton(
+                                    onClick = { abrirGaleria() },
+                                    modifier = Modifier.weight(1f),
+                                    shape    = RoundedCornerShape(12.dp),
+                                    border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                ) {
+                                    Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Galería")
                                 }
                             }
-                            viewModel.enviarEvidencia(
-                                idAsignacion = idAsignacion,
-                                nombreAlumno = nombreAlumno,
-                                tituloTarea  = tarea.titulo,
-                                archivoBytes = bytes,
-                                nombreArchivo = nombreArchivo,
-                                textoEvidencia = textoEvidencia,
-                                bitmap       = fotoBitmap
-                            )
-                        },
-                        modifier  = Modifier.fillMaxWidth(),
-                        shape     = RoundedCornerShape(12.dp),
-                        enabled   = (fotoBitmap != null || archivoUri != null || textoEvidencia.isNotBlank()) && uiState !is EnviarEvidenciaUiState.Uploading,
-                        colors    = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        if (uiState is EnviarEvidenciaUiState.Uploading) {
-                            CircularProgressIndicator(
-                                modifier  = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color       = MaterialTheme.colorScheme.onPrimary
-                            )
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text("Enviando…", style = MaterialTheme.typography.labelLarge)
-                        } else {
-                            Icon(
-                                Icons.Default.CloudUpload,
-                                contentDescription = null,
-                                modifier = Modifier.size(ButtonDefaults.IconSize)
-                            )
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text("Enviar Evidencia", style = MaterialTheme.typography.labelLarge)
+
+                            // Botón Archivo (nuevo)
+                            OutlinedButton(
+                                onClick = { getFileLauncher.launch(arrayOf("*/*")) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape    = RoundedCornerShape(12.dp),
+                                border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Icon(Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Adjuntar Documento")
+                            }
                         }
-                    }
+
+                        // Botón Enviar Evidencia
+                        Button(
+                            onClick = {
+                                viewModel.enviarEvidencia(
+                                    context = context,
+                                    idAsignacion = idAsignacion,
+                                    nombreAlumno = nombreAlumno,
+                                    tituloTarea  = tarea.titulo,
+                                    archivosSubir = if (isVencida) emptyList() else archivosSubir,
+                                    vinculos = if (isVencida) emptyList() else vinculos,
+                                    textoEvidencia = textoEvidencia
+                                )
+                            },
+                            modifier  = Modifier.fillMaxWidth(),
+                            shape     = RoundedCornerShape(12.dp),
+                            enabled   = (archivosSubir.isNotEmpty() || vinculos.isNotEmpty() || textoEvidencia.isNotBlank()) && uiState !is EnviarEvidenciaUiState.Uploading,
+                            colors    = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            if (uiState is EnviarEvidenciaUiState.Uploading) {
+                                CircularProgressIndicator(
+                                    modifier  = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color       = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                Text("Enviando…", style = MaterialTheme.typography.labelLarge)
+                            } else {
+                                Icon(
+                                    Icons.Default.CloudUpload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                                )
+                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                Text("Enviar Evidencia", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
                     } // Fin de if (!isReadOnlyMode)
                 }
             }
@@ -463,6 +502,55 @@ fun EnviarEvidenciaScreen(
                             )
                         }
 
+                        // Material complementario de la tarea
+                        if (archivosTarea.isNotEmpty()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Text(
+                                "Material Adjunto del Profesor:",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                            archivosTarea.forEach { archivo ->
+                                val nombre = archivo["nombre"] as? String ?: "archivo"
+                                val base64 = archivo["base64"] as? String ?: ""
+                                val esLink = archivo["esLink"] as? Boolean ?: false
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = nombre,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (esLink || base64.startsWith("http")) {
+                                        IconButton(
+                                            onClick = { try { uriHandler.openUri(base64) } catch(e: Exception) {} }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.OpenInNew,
+                                                contentDescription = "Abrir enlace",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    } else {
+                                        IconButton(
+                                            onClick = { visorData = base64 to nombre }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Visibility,
+                                                contentDescription = "Ver material",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Fecha límite
                         val fmt = SimpleDateFormat("dd 'de' MMMM 'a las' HH:mm", Locale("es", "MX"))
                         Row(
@@ -502,6 +590,47 @@ fun EnviarEvidenciaScreen(
                     }
                 }
 
+                val currentEvidencia = evidenciaEnviada
+                if (isReadOnlyMode && currentEvidencia?.comentarioProfesor?.isNotBlank() == true) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.Feedback, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                                Text("Comentario del profesor", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            }
+                            Text(currentEvidencia.comentarioProfesor, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            if (currentEvidencia.calificacionProfesor != null) {
+                                Text("Calificación: ${currentEvidencia.calificacionProfesor}/10", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                            }
+                        }
+                    }
+                }
+
+                if (isVencida) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
+                            Text("Esta tarea está vencida. Solo puedes entregar un comentario.", color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
                 // ── Zona de texto de evidencia ─────────────────────────────────────
                 OutlinedTextField(
                     value = actualTexto,
@@ -513,104 +642,181 @@ fun EnviarEvidenciaScreen(
                     readOnly = isReadOnlyMode
                 )
 
-                // ── Zona de previsualización del archivo ───────────────────────
-                Text(
-                    "Archivos Adjuntos",
-                    style      = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(4f / 3f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(
-                            width = 1.5.dp,
-                            color = MaterialTheme.colorScheme.outline,
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier            = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                // ── Zona de Vínculos ───────────────────────────────────────────────────────
+                if (!isReadOnlyMode && !isVencida) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Placeholder — visible cuando no hay foto ni archivo
-                        AnimatedVisibility(
-                            visible = fotoBitmap == null && archivoUri == null,
-                            enter   = fadeIn(),
-                            exit    = fadeOut()
+                        OutlinedTextField(
+                            value = nuevoVinculo,
+                            onValueChange = { nuevoVinculo = it },
+                            label = { Text("Añadir un enlace") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (nuevoVinculo.isNotBlank()) {
+                                    vinculos = vinculos + nuevoVinculo
+                                    nuevoVinculo = ""
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Surface(
-                                    modifier = Modifier.size(72.dp),
-                                    shape    = MaterialTheme.shapes.extraLarge,
-                                    color    = MaterialTheme.colorScheme.surface
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Default.CameraAlt,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(36.dp),
-                                            tint     = MaterialTheme.colorScheme.primary
-                                        )
+                            Text("Añadir")
+                        }
+                    }
+                }
+
+                if (actualVinculos.isNotEmpty()) {
+                    Text(
+                        "Enlaces añadidos:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    actualVinculos.forEach { link ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val url = if (!link.startsWith("http://") && !link.startsWith("https://")) {
+                                        "https://$link"
+                                    } else link
+                                    try {
+                                        uriHandler.openUri(url)
+                                    } catch (e: Exception) {
+                                        // Ignore or show toast if needed
                                     }
                                 }
-                                Text(
-                                    if (isReadOnlyMode) "Evidencia enviada" else "Toca los botones para adjuntar\ntu evidencia",
-                                    style     = MaterialTheme.typography.bodyMedium,
-                                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                            }
-                        }
-
-                        // Documento genérico — visible cuando hay archivo pero no foto
-                        AnimatedVisibility(
-                            visible = (archivoUri != null && fotoBitmap == null && !isReadOnlyMode) || 
-                                      (isReadOnlyMode && evidenciaEnviada?.fotoBase64 == null && actualNombreArchivo != null),
-                            enter   = fadeIn() + scaleIn(initialScale = 0.92f),
-                            exit    = fadeOut()
+                                .padding(vertical = 4.dp)
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                link, 
+                                style = MaterialTheme.typography.bodyMedium, 
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                            )
+                        }
+                    }
+                }
+
+                // ── Zona de Archivos ───────────────────────────────────────────────────────
+                if (!isVencida || isReadOnlyMode) {
+                    Text(
+                        "Archivos Adjuntos (${if (isReadOnlyMode) actualArchivosEnviados.size + (if(base64Foto!=null) 1 else 0) else archivosSubir.size}/3)",
+                        style      = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Mostrar archivos en modo escritura
+                if (!isReadOnlyMode && archivosSubir.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        archivosSubir.forEachIndexed { index, archivo ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.InsertDriveFile,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    actualNombreArchivo ?: "Archivo seleccionado",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            if (archivo.bitmap != null) Icons.Default.Image else Icons.Default.InsertDriveFile,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(archivo.nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                    }
+                                    IconButton(onClick = { 
+                                        val mList = archivosSubir.toMutableList()
+                                        mList.removeAt(index)
+                                        archivosSubir = mList
+                                    }) {
+                                        Icon(Icons.Default.Close, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Mostrar archivos en modo lectura
+                if (isReadOnlyMode) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Archivos guardados (Base64)
+                        actualArchivosEnviados.forEach { archivoMap ->
+                            val base64Data = archivoMap["base64"] ?: ""
+                            val nombre = archivoMap["nombre"] ?: "Archivo"
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                    }
+                                    IconButton(onClick = { 
+                                        if (base64Data.isNotBlank()) {
+                                            visorData = Pair(base64Data, nombre)
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
                             }
                         }
 
-                        // Imagen capturada — visible cuando hay foto
-                        AnimatedVisibility(
-                            visible = (!isReadOnlyMode && fotoBitmap != null) || (isReadOnlyMode && bitmapLectura != null),
-                            enter   = fadeIn() + scaleIn(initialScale = 0.92f),
-                            exit    = fadeOut()
-                        ) {
-                            val bmpToShow = if (isReadOnlyMode) bitmapLectura else fotoBitmap
-                            bmpToShow?.let { bmp ->
+                        // Archivo Legacy Base64
+                        if (base64Foto != null) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(actualNombreArchivoLegacy ?: "Archivo antiguo", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
+                                    }
+                                    IconButton(onClick = { 
+                                        visorData = Pair(base64Foto, actualNombreArchivoLegacy ?: "Archivo antiguo") 
+                                    }) {
+                                        Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                }
+                            }
+                            
+                            // Vista previa de imagen si es bitmap
+                            if (bitmapLectura != null) {
                                 Image(
-                                    bitmap             = bmp.asImageBitmap(),
+                                    bitmap = bitmapLectura!!.asImageBitmap(),
                                     contentDescription = "Foto de evidencia",
-                                    modifier           = Modifier.fillMaxSize(),
-                                    contentScale       = ContentScale.Crop
+                                    modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
                                 )
                             }
                         }
@@ -665,7 +871,51 @@ fun EnviarEvidenciaScreen(
                     CircularProgressIndicator()
                 }
             }
+
+            if (uiState is EnviarEvidenciaUiState.Uploading) {
+                val progress = (uiState as EnviarEvidenciaUiState.Uploading).progress
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium)
+                            .padding(24.dp)
+                    ) {
+                        if (progress > 0f) {
+                            CircularProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Subiendo evidencia... ${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    visorData?.let { (base64, nombre) ->
+        VisorArchivoDialog(
+            base64String = base64,
+            nombreArchivo = nombre,
+            onDismissRequest = { visorData = null }
+        )
     }
 }
 
@@ -747,6 +997,30 @@ private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     } catch (e: Exception) {
         null
+    }
+}
+
+private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
+    try {
+        val cleanString = if (base64Str.contains(",")) {
+            base64Str.substring(base64Str.indexOf(",") + 1)
+        } else {
+            base64Str
+        }
+        val bytes = android.util.Base64.decode(cleanString, android.util.Base64.DEFAULT)
+        val safeFileName = fileName ?: "documento.pdf"
+        val file = File(context.cacheDir, safeFileName)
+        FileOutputStream(file).use { it.write(bytes) }
+        
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, "Abrir archivo con"))
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Error al abrir el archivo", Toast.LENGTH_SHORT).show()
     }
 }
 

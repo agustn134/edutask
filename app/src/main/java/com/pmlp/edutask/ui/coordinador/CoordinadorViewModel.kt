@@ -58,18 +58,32 @@ class CoordinadorViewModel : ViewModel() {
     fun saveUsuario(usuario: Usuario, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
+                var finalIdUsuario = usuario.idUsuario
+                var finalMatricula = usuario.matricula
+
+                if (finalIdUsuario.isEmpty()) {
+                    val initials = usuario.nombre.trim().split("\\s+".toRegex())
+                        .filter { it.isNotEmpty() }
+                        .map { it.first().uppercaseChar() }
+                        .joinToString("")
+                    val prefix = when (usuario.rol) {
+                        RolUsuario.Alumno -> "A-"
+                        RolUsuario.Profesor -> "P-"
+                        RolUsuario.Coordinador -> "C-"
+                    }
+                    finalIdUsuario = "$prefix$initials"
+                    finalMatricula = "$prefix$initials"
+                }
+
                 val map = mapOf(
                     "nombre" to usuario.nombre,
-                    "matricula" to usuario.matricula,
+                    "matricula" to finalMatricula,
                     "correo" to usuario.correo,
                     "contrasena" to usuario.contrasena,
                     "rol" to usuario.rol.name
                 )
-                if (usuario.idUsuario.isEmpty()) {
-                    db.collection("usuarios").add(map).await()
-                } else {
-                    db.collection("usuarios").document(usuario.idUsuario).set(map).await()
-                }
+
+                db.collection("usuarios").document(finalIdUsuario).set(map).await()
                 fetchUsuarios()
                 onSuccess()
             } catch (e: Exception) {

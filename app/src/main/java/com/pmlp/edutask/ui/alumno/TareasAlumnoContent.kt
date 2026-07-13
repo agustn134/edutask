@@ -19,6 +19,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.Tarea
+import com.pmlp.edutask.ui.components.EmptyStateIllustration
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Tab
 import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,6 +30,21 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                   tareas: List<TareaItem>, pendienteCount: Int, clases: List<String>,
                   isRefreshing: Boolean, onRefresh: () -> Unit,
                   onVerTarea: (TareaItem) -> Unit = {}) {
+    val now = java.util.Date()
+    val tareasPendientes = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }
+    val tareasVencidas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && now.after(it.tarea.fechaLimite) }
+    val tareasEntregadas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia != null }
+    val tareasEvaluadas = tareas.filter { it.estado == EstadoEvidencia.Aprobada || it.estado == EstadoEvidencia.Rechazada }
+
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Pendientes", "Entregadas", "Evaluadas")
+
+    val currentTareas = when (selectedTabIndex) {
+        0 -> tareasPendientes
+        1 -> tareasEntregadas
+        else -> tareasEvaluadas
+    }
+
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
@@ -44,60 +62,106 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                         Icon(Icons.Default.FilterList, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Text("Filtrar por Clase", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(end = 8.dp)
+                    val allItems = listOf("Todas") + clases
+                    val chunked = allItems.chunked(2)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Chip para "Todas"
-                        item {
-                            FilterChip(
-                                selected = claseSelected == null,
-                                onClick = { onClaseSelected(claseSelected ?: "") }, // Al pasar la misma o vacío, si la lógica dice "if (it == claseSelected) null", pasamos "" para forzar null. Espera, el onClaseSelected en HomeAlumnoScreen hace: `if (claseSelected == it) null else it`. Entonces si pasamos `claseSelected`, se vuelve `null`. ¡Perfecto!
-                                label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
-                                leadingIcon = { if (claseSelected == null) Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                            )
-                        }
-                        // Chips de cada clase
-                        items(clases) { clase ->
-                            FilterChip(
-                                selected = claseSelected == clase,
-                                onClick = { onClaseSelected(clase) },
-                                label = { Text(clase, style = MaterialTheme.typography.labelMedium) },
-                                leadingIcon = { if (claseSelected == clase) Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                            )
+                        chunked.forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowItems.forEach { item ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ClaseGridItem(
+                                            nombre = item,
+                                            isSelected = if (item == "Todas") claseSelected == null else claseSelected == item,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onClick = {
+                                                if (item == "Todas") onClaseSelected(claseSelected ?: "")
+                                                else onClaseSelected(item)
+                                            }
+                                        )
+                                    }
+                                }
+                                if (rowItems.size < 2) {
+                                    Spacer(modifier = Modifier.weight((2 - rowItems.size).toFloat()))
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Título de la lista
+            // Título de la lista y Tabs Kanban
             item {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Icon(Icons.Default.FormatListBulleted, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                    Text("Lista de Tareas", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
-                    if (pendienteCount > 0 && claseSelected == null) {
-                        Badge(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError) { 
-                            Text("$pendienteCount pendientes") 
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.FormatListBulleted, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                        Text("Lista de Tareas", style = MaterialTheme.typography.titleLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.weight(1f))
+                        if (pendienteCount > 0 && claseSelected == null) {
+                            Badge(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError) { 
+                                Text("$pendienteCount pendientes") 
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TabRow(selectedTabIndex = selectedTabIndex) {
+                        tabs.forEachIndexed { index, title ->
+                            val count = when (index) {
+                                0 -> tareasPendientes.size
+                                1 -> tareasEntregadas.size
+                                else -> tareasEvaluadas.size
+                            }
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                text = { Text("$title ($count)", style = MaterialTheme.typography.titleSmall) }
+                            )
                         }
                     }
                 }
             }
 
             // Lista de Tareas o Estado Vacío
-            if (tareas.isEmpty()) {
+            if (currentTareas.isEmpty()) {
                 item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(Icons.Default.CheckCircleOutline, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.surfaceVariant)
-                        Text("No hay tareas para mostrar.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val (icon, title, subtitle) = when (selectedTabIndex) {
+                        0 -> Triple(Icons.Default.TaskAlt, "Sin Tareas Pendientes", "¡Estás al día con tus entregas!")
+                        1 -> Triple(Icons.Default.PendingActions, "Aún No Hay Entregas", "Cuando entregues tus tareas, aparecerán aquí.")
+                        else -> Triple(Icons.Default.FactCheck, "Sin Tareas Evaluadas", "Tus calificaciones aparecerán aquí cuando el profesor revise.")
                     }
+                    EmptyStateIllustration(
+                        icon = icon,
+                        title = title,
+                        subtitle = subtitle,
+                        modifier = Modifier.padding(top = 40.dp)
+                    )
                 }
             } else {
-                items(tareas) { item -> 
+                items(currentTareas, key = { it.idAsignacion }) { item -> 
                     TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) 
+                }
+            }
+
+            if (tareasVencidas.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(22.dp))
+                        Text(
+                            "Tareas Fuera de Límite", 
+                            style = MaterialTheme.typography.titleLarge, 
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+                items(tareasVencidas, key = { it.idAsignacion }) { item -> 
+                    TareaCard(item.tarea, item.estado, isVencida = true, onClick = { onVerTarea(item) }) 
                 }
             }
             
@@ -107,7 +171,7 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
 }
 
 @Composable
-fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, onClick: () -> Unit = {}) {
+fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false, onClick: () -> Unit = {}) {
     val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
     ElevatedCard(
         onClick = onClick,
@@ -148,7 +212,13 @@ fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, onClick: () -> Unit = {}) {
                 
                 // Textos
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(tarea.titulo, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = tarea.titulo, 
+                        style = MaterialTheme.typography.titleSmall, 
+                        maxLines = 2, 
+                        overflow = TextOverflow.Ellipsis,
+                        color = if (isVencida) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    )
                     Text(tarea.descripcion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -184,4 +254,31 @@ fun EstadoChip(estado: EstadoEvidencia) {
                    icon = { Icon(icon, null, Modifier.size(AssistChipDefaults.IconSize)) },
                    colors = SuggestionChipDefaults.suggestionChipColors(containerColor = container, labelColor = content, iconContentColor = content),
                    border = null)
+}
+
+@Composable
+fun ClaseGridItem(nombre: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.height(80.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (isSelected) 4.dp else 1.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = nombre,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
 }

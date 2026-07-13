@@ -1,10 +1,12 @@
 package com.pmlp.edutask.ui.alumno
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pmlp.edutask.model.Evento
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.text.style.TextOverflow
+import com.pmlp.edutask.ui.components.EmptyStateIllustration
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -51,7 +54,7 @@ fun InicioContent(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
-                    items(eventos) { evento ->
+                    items(eventos, key = { it.idEvento }) { evento ->
                         EventoCarouselCard(evento)
                     }
                 }
@@ -83,7 +86,7 @@ fun InicioContent(
                     OutlinedTextField(
                         value = codigoClase,
                         onValueChange = { codigoClase = it },
-                        label = { Text("Código de clase (Ej. ZJB97S)") },
+                        label = { Text("Código de clase.") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -111,13 +114,19 @@ fun InicioContent(
             }
         }
         
-        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente }.take(3)
+        val now = java.util.Date()
+        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }.take(3)
         if (proximasTareas.isEmpty()) {
             item {
-                Text("No hay tareas próximas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                EmptyStateIllustration(
+                    icon = Icons.Default.TaskAlt,
+                    title = "¡Todo al día!",
+                    subtitle = "Puedes relajarte, no hay tareas próximas.",
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
         } else {
-            items(proximasTareas) { item -> TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) }
+            items(proximasTareas, key = { it.idAsignacion }) { item -> TareaCard(item.tarea, item.estado, onClick = { onVerTarea(item) }) }
         }
         item { Spacer(Modifier.height(72.dp)) }
     }
@@ -128,9 +137,10 @@ fun InicioContent(
 fun EventoCarouselCard(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
+    var showDialog by remember { mutableStateOf(false) }
 
     OutlinedCard(
-        modifier = Modifier.width(260.dp).height(120.dp),
+        modifier = Modifier.width(260.dp).height(120.dp).clickable { showDialog = true },
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -139,5 +149,27 @@ fun EventoCarouselCard(evento: Evento) {
             Text(evento.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(evento.titulo, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Publicado: $fechaFormat",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(evento.descripcion, style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 }
