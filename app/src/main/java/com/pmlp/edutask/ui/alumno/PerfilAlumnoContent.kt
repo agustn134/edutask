@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Grade
 import com.pmlp.edutask.model.EstadoEvidencia
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -142,7 +144,8 @@ fun PerfilContent(
         )
         Spacer(Modifier.height(16.dp))
         
-        ShortcutItem(icon = Icons.Default.Email, title = "Contacto Administrativo", subtitle = "control.escolar@edutask.edu")
+        val clasesUnicas = tareas.map { it.tarea.nombreClase }.distinct()
+        VideoConferenciasAccordion(clases = clasesUnicas)
         Spacer(Modifier.height(12.dp))
         AjustesCuentaAccordion(correoActual = correo, onGuardarCambios = onGuardarCambios)
         Spacer(Modifier.height(12.dp))
@@ -393,6 +396,108 @@ fun ShortcutItem(icon: ImageVector, title: String, subtitle: String) {
             Column {
                 Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VideoConferenciasAccordion(clases: List<String>) {
+    var expanded by remember { mutableStateOf(false) }
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        onClick = { expanded = !expanded },
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Videocam, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp))
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Video Conferencias de clases", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Text(text = "Enlaces a tus clases virtuales", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            if (expanded) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (clases.isEmpty()) {
+                        Text(
+                            text = "No tienes clases asignadas por el momento.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        clases.forEach { clase ->
+                            // Generar un link estático basado en el nombre de la clase para demostración
+                            val link = "https://meet.google.com/${clase.lowercase(java.util.Locale.getDefault()).replace(" ", "-").take(10)}"
+                            
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                onClick = { 
+                                    try {
+                                        uriHandler.openUri(link)
+                                    } catch (e: Exception) { }
+                                },
+                                shape = MaterialTheme.shapes.medium,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Link,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = clase,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = link,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

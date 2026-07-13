@@ -23,6 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -51,6 +53,7 @@ import android.os.Build
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import android.provider.OpenableColumns
+import com.pmlp.edutask.ui.components.VisorArchivoDialog
 
 // ── Pantalla principal ───────────────────────────────────────────────────────
 
@@ -73,25 +76,28 @@ fun EnviarEvidenciaScreen(
     val isVencida = evidenciaEnviada == null && now.after(tarea.fechaLimite)
     val isReadOnlyMode = evidenciaEnviada != null
 
+    var visorData by remember { mutableStateOf<Pair<String, String>?>(null) }
+
     LaunchedEffect(idEvidenciaRecibida) {
         if (idEvidenciaRecibida != null) {
             viewModel.cargarEvidenciaEnviada(idEvidenciaRecibida)
         }
     }
 
-    var archivosTarea by remember { mutableStateOf<List<Map<String, String>>>(emptyList()) }
+    var archivosTarea by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     LaunchedEffect(tarea.idTarea) {
         if (tarea.idTarea.isNotBlank()) {
             com.google.firebase.firestore.FirebaseFirestore.getInstance().collection("tareas").document(tarea.idTarea).get()
                 .addOnSuccessListener { doc ->
                     if (doc.exists()) {
                         val rawArchivos = doc.get("archivos") as? List<*>
-                        val list = mutableListOf<Map<String, String>>()
+                        val list = mutableListOf<Map<String, Any>>()
                         rawArchivos?.forEach { item ->
                             if (item is Map<*, *>) {
                                 val nombre = item["nombre"]?.toString() ?: ""
                                 val base64 = item["base64"]?.toString() ?: ""
-                                list.add(mapOf("nombre" to nombre, "base64" to base64))
+                                val esLink = item["esLink"] as? Boolean ?: false
+                                list.add(mapOf("nombre" to nombre, "base64" to base64, "esLink" to esLink))
                             }
                         }
                         archivosTarea = list
@@ -505,9 +511,11 @@ fun EnviarEvidenciaScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
                             archivosTarea.forEach { archivo ->
-                                val nombre = archivo["nombre"] ?: "archivo"
-                                val base64 = archivo["base64"] ?: ""
+                                val nombre = archivo["nombre"] as? String ?: "archivo"
+                                val base64 = archivo["base64"] as? String ?: ""
+                                val esLink = archivo["esLink"] as? Boolean ?: false
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -518,14 +526,26 @@ fun EnviarEvidenciaScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    IconButton(
-                                        onClick = { abrirArchivoBase64(context, base64, nombre) }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Download,
-                                            contentDescription = "Descargar material",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                    if (esLink || base64.startsWith("http")) {
+                                        IconButton(
+                                            onClick = { try { uriHandler.openUri(base64) } catch(e: Exception) {} }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.OpenInNew,
+                                                contentDescription = "Abrir enlace",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    } else {
+                                        IconButton(
+                                            onClick = { visorData = base64 to nombre }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Visibility,
+                                                contentDescription = "Ver material",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -754,10 +774,9 @@ fun EnviarEvidenciaScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
                                     }
-                                    val ctx = LocalContext.current
                                     IconButton(onClick = { 
                                         if (base64Data.isNotBlank()) {
-                                            abrirArchivoBase64(ctx, base64Data, nombre)
+                                            visorData = Pair(base64Data, nombre)
                                         }
                                     }) {
                                         Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
@@ -783,9 +802,8 @@ fun EnviarEvidenciaScreen(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(actualNombreArchivoLegacy ?: "Archivo antiguo", maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
                                     }
-                                    val ctx = LocalContext.current
                                     IconButton(onClick = { 
-                                        abrirArchivoBase64(ctx, base64Foto, actualNombreArchivoLegacy) 
+                                        visorData = Pair(base64Foto, actualNombreArchivoLegacy ?: "Archivo antiguo") 
                                     }) {
                                         Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
                                     }
@@ -853,7 +871,51 @@ fun EnviarEvidenciaScreen(
                     CircularProgressIndicator()
                 }
             }
+
+            if (uiState is EnviarEvidenciaUiState.Uploading) {
+                val progress = (uiState as EnviarEvidenciaUiState.Uploading).progress
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium)
+                            .padding(24.dp)
+                    ) {
+                        if (progress > 0f) {
+                            CircularProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Subiendo evidencia... ${(progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    visorData?.let { (base64, nombre) ->
+        VisorArchivoDialog(
+            base64String = base64,
+            nombreArchivo = nombre,
+            onDismissRequest = { visorData = null }
+        )
     }
 }
 

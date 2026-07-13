@@ -21,7 +21,7 @@ import java.util.UUID
 // ── Estados de la UI ────────────────────────────────────────────────────────
 sealed class EnviarEvidenciaUiState {
     object Idle      : EnviarEvidenciaUiState()
-    object Uploading : EnviarEvidenciaUiState()
+    data class Uploading(val progress: Float) : EnviarEvidenciaUiState()
     object Success   : EnviarEvidenciaUiState()
     data class Error(val mensaje: String) : EnviarEvidenciaUiState()
 }
@@ -142,12 +142,15 @@ class EnviarEvidenciaViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-            _uiState.value = EnviarEvidenciaUiState.Uploading
+            _uiState.value = EnviarEvidenciaUiState.Uploading(0f)
             try {
                 val subidos = mutableListOf<Map<String, String>>()
+                val totalSteps = archivosSubir.size + 1
+                var currentStep = 0
 
                 // Convertir cada archivo a Base64
                 for (archivo in archivosSubir) {
+                    _uiState.value = EnviarEvidenciaUiState.Uploading(currentStep.toFloat() / totalSteps)
                     val base64String = withContext(Dispatchers.IO) {
                         try {
                             if (archivo.bitmap != null) {
@@ -170,7 +173,10 @@ class EnviarEvidenciaViewModel : ViewModel() {
                     if (base64String.isNotBlank()) {
                         subidos.add(mapOf("nombre" to archivo.nombre, "base64" to base64String))
                     }
+                    currentStep++
                 }
+
+                _uiState.value = EnviarEvidenciaUiState.Uploading(currentStep.toFloat() / totalSteps)
 
                 // Guardar en Firestore colección "evidencias_tarea"
                 val evidenciaData = hashMapOf<String, Any>(
