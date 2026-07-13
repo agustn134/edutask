@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +35,8 @@ import java.text.SimpleDateFormat
 data class ArchivoAdjunto(
     val uri: Uri? = null,
     val nombre: String,
-    val base64: String? = null
+    val base64: String? = null,
+    val esLink: Boolean = false
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,6 +89,10 @@ fun CrearTareaScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState()
+    
+    var showLinkDialog by remember { mutableStateOf(false) }
+    var linkUrl by remember { mutableStateOf("") }
+    var linkTitle by remember { mutableStateOf("") }
 
     // Load professor classes
     LaunchedEffect(idUsuario) {
@@ -134,7 +140,8 @@ fun CrearTareaScreen(
                             if (item is Map<*, *>) {
                                 val nombre = item["nombre"]?.toString() ?: ""
                                 val base64 = item["base64"]?.toString() ?: ""
-                                cargados.add(ArchivoAdjunto(nombre = nombre, base64 = base64))
+                                val esLink = item["esLink"] as? Boolean ?: false
+                                cargados.add(ArchivoAdjunto(nombre = nombre, base64 = base64, esLink = esLink))
                             }
                         }
                         archivosAdjuntos = cargados
@@ -280,6 +287,13 @@ fun CrearTareaScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (archivo.esLink) {
+                            Icon(Icons.Default.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else {
+                            Icon(Icons.Default.AttachFile, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         Text(
                             text = archivo.nombre,
                             style = MaterialTheme.typography.bodyMedium,
@@ -300,18 +314,28 @@ fun CrearTareaScreen(
                 }
             }
 
-            OutlinedButton(
-                onClick = { selectFilesLauncher.launch(arrayOf("*/*")) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !isLoading
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = null
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Adjuntar Archivo o Imagen")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedButton(
+                    onClick = { selectFilesLauncher.launch(arrayOf("*/*")) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
+                ) {
+                    Icon(imageVector = Icons.Default.AttachFile, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Archivo", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
+                
+                OutlinedButton(
+                    onClick = { showLinkDialog = true },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
+                ) {
+                    Icon(imageVector = Icons.Default.Link, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Enlace", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -324,11 +348,13 @@ fun CrearTareaScreen(
 
                         scope.launch {
                             try {
-                                val subidos = mutableListOf<Map<String, String>>()
+                                val subidos = mutableListOf<Map<String, Any>>()
                                 
                                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                                     for (archivo in archivosAdjuntos) {
-                                        if (archivo.base64 != null) {
+                                        if (archivo.esLink && archivo.base64 != null) {
+                                            subidos.add(mapOf("nombre" to archivo.nombre, "base64" to archivo.base64, "esLink" to true))
+                                        } else if (archivo.base64 != null) {
                                             subidos.add(mapOf("nombre" to archivo.nombre, "base64" to archivo.base64))
                                         } else if (archivo.uri != null) {
                                             try {
@@ -506,6 +532,63 @@ fun CrearTareaScreen(
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     TimePicker(state = timePickerState)
+                }
+            }
+        )
+    }
+
+    if (showLinkDialog) {
+        AlertDialog(
+            onDismissRequest = { showLinkDialog = false },
+            title = { Text("Agregar Enlace Externo") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = linkUrl,
+                        onValueChange = { linkUrl = it },
+                        label = { Text("URL del enlace (https://...)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = linkTitle,
+                        onValueChange = { linkTitle = it },
+                        label = { Text("Título (opcional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (linkUrl.isNotBlank()) {
+                            val urlFixed = if (!linkUrl.startsWith("http://") && !linkUrl.startsWith("https://")) "https://$linkUrl" else linkUrl
+                            val finalTitle = if (linkTitle.isNotBlank()) linkTitle else urlFixed
+                            archivosAdjuntos = archivosAdjuntos + ArchivoAdjunto(
+                                uri = null,
+                                nombre = "Enlace: $finalTitle",
+                                base64 = urlFixed,
+                                esLink = true
+                            )
+                        }
+                        showLinkDialog = false
+                        linkUrl = ""
+                        linkTitle = ""
+                    }
+                ) {
+                    Text("Agregar")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showLinkDialog = false
+                        linkUrl = ""
+                        linkTitle = ""
+                    }
+                ) {
+                    Text("Cancelar")
                 }
             }
         )

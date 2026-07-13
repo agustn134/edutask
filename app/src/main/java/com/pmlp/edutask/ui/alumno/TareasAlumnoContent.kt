@@ -62,27 +62,34 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                         Icon(Icons.Default.FilterList, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Text("Filtrar por Clase", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(end = 8.dp)
+                    val allItems = listOf("Todas") + clases
+                    val chunked = allItems.chunked(2)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Chip para "Todas"
-                        item {
-                            FilterChip(
-                                selected = claseSelected == null,
-                                onClick = { onClaseSelected(claseSelected ?: "") }, // Al pasar la misma o vacío, si la lógica dice "if (it == claseSelected) null", pasamos "" para forzar null. Espera, el onClaseSelected en HomeAlumnoScreen hace: `if (claseSelected == it) null else it`. Entonces si pasamos `claseSelected`, se vuelve `null`. ¡Perfecto!
-                                label = { Text("Todas", style = MaterialTheme.typography.labelMedium) },
-                                leadingIcon = { if (claseSelected == null) Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                            )
-                        }
-                        // Chips de cada clase
-                        items(clases, key = { it }) { clase ->
-                            FilterChip(
-                                selected = claseSelected == clase,
-                                onClick = { onClaseSelected(clase) },
-                                label = { Text(clase, style = MaterialTheme.typography.labelMedium) },
-                                leadingIcon = { if (claseSelected == clase) Icon(Icons.Default.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-                            )
+                        chunked.forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                rowItems.forEach { item ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ClaseGridItem(
+                                            nombre = item,
+                                            isSelected = if (item == "Todas") claseSelected == null else claseSelected == item,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            onClick = {
+                                                if (item == "Todas") onClaseSelected(claseSelected ?: "")
+                                                else onClaseSelected(item)
+                                            }
+                                        )
+                                    }
+                                }
+                                if (rowItems.size < 2) {
+                                    Spacer(modifier = Modifier.weight((2 - rowItems.size).toFloat()))
+                                }
+                            }
                         }
                     }
                 }
@@ -247,4 +254,31 @@ fun EstadoChip(estado: EstadoEvidencia) {
                    icon = { Icon(icon, null, Modifier.size(AssistChipDefaults.IconSize)) },
                    colors = SuggestionChipDefaults.suggestionChipColors(containerColor = container, labelColor = content, iconContentColor = content),
                    border = null)
+}
+
+@Composable
+fun ClaseGridItem(nombre: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.height(80.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (isSelected) 4.dp else 1.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = nombre,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
 }
