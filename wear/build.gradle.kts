@@ -9,7 +9,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.pmlp.wear"
+        applicationId = "com.pmlp.edutask"
         minSdk = 30
         targetSdk = 36
         versionCode = 1

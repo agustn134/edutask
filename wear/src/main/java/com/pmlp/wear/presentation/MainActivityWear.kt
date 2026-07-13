@@ -6,6 +6,8 @@
 package com.pmlp.wear.presentation
 
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -28,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.material3.*
 import coil.compose.AsyncImage
@@ -41,6 +45,22 @@ import com.pmlp.wear.presentation.theme.EdutaskTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Request notifications permissions for Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+            }
+        }
+
+        // Start background task notification service
+        try {
+            val serviceIntent = Intent(this, TaskNotificationService::class.java)
+            startService(serviceIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         setContent {
             EdutaskTheme {
                 EduTaskWearApp()
@@ -57,9 +77,10 @@ private sealed class WearDestino {
         val idEvidencia: String,
         val nombreAlumno: String,
         val tituloTarea: String,
-        val foto: String
+        val fotos: List<String>,
+        val tieneArchivosNoImagen: Boolean
     ) : WearDestino()
-    data class VerFoto(val foto: String, val prevDestino: WearDestino) : WearDestino()
+    data class VerFoto(val fotos: List<String>, val prevDestino: WearDestino) : WearDestino()
 }
 
 @Composable
@@ -74,10 +95,51 @@ fun EduTaskWearApp() {
     val db = remember { FirebaseFirestore.getInstance() }
     var isFirstLoad by remember { mutableStateOf(true) }
 
-    DisposableEffect(Unit) {
-        val prefs = context.getSharedPreferences("edutask_wear_prefs", Context.MODE_PRIVATE)
-        val idProfesor = prefs.getString("idUsuario", "profesor_001") ?: "profesor_001"
+    val prefs = remember(context) { context.getSharedPreferences("edutask_wear_prefs", Context.MODE_PRIVATE) }
+    var nombreProfesor by remember { mutableStateOf(prefs.getString("nombre", "Sin sincronizar") ?: "Sin sincronizar") }
+    var idProfesor by remember { mutableStateOf(prefs.getString("idUsuario", "profesor_001") ?: "profesor_001") }
 
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { sharedPreferences, key ->
+            if (key == "nombre") {
+                nombreProfesor = sharedPreferences.getString("nombre", "Sin sincronizar") ?: "Sin sincronizar"
+            }
+            if (key == "idUsuario") {
+                idProfesor = sharedPreferences.getString("idUsuario", "profesor_001") ?: "profesor_001"
+                vm.cargarPendientes()
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    // Sincronización en la nube vía Firestore (Fallback)
+    DisposableEffect(Unit) {
+        val listener = db.collection("sesion_wear").document("default")
+            .addSnapshotListener { snapshot, error ->
+                if (error == null && snapshot != null && snapshot.exists()) {
+                    val idUsuarioVal = snapshot.getString("idUsuario") ?: ""
+                    val nombreVal = snapshot.getString("nombre") ?: ""
+                    if (idUsuarioVal.isNotEmpty() && nombreVal.isNotEmpty()) {
+                        prefs.edit()
+                            .putString("idUsuario", idUsuarioVal)
+                            .putString("nombre", nombreVal)
+                            .apply()
+                        
+                        idProfesor = idUsuarioVal
+                        nombreProfesor = nombreVal
+                        vm.cargarPendientes()
+                    }
+                }
+            }
+        onDispose {
+            listener.remove()
+        }
+    }
+
+    DisposableEffect(idProfesor) {
         val listener = db.collection("evidencias_tarea")
             .orderBy("fechaEnvio", Query.Direction.DESCENDING)
             .limit(1)
@@ -108,7 +170,28 @@ fun EduTaskWearApp() {
                                         if (classProfId == idProfesor) {
                                             val nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno"
                                             val tituloTarea = doc.getString("tituloTarea") ?: "Tarea"
-                                            val foto = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: ""
+                                            val fotos = mutableListOf<String>()
+                                            val legacyFoto = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: ""
+                                            if (legacyFoto.isNotEmpty()) {
+                                                fotos.add(legacyFoto)
+                                            }
+                                            var tieneArchivosNoImagen = false
+                                            val archivosRaw = doc.get("archivos") as? List<*>
+                                            archivosRaw?.forEach { item ->
+                                                if (item is Map<*, *>) {
+                                                    val nombre = item["nombre"]?.toString() ?: ""
+                                                    val base64 = item["base64"]?.toString() ?: ""
+                                                    val isImage = nombre.lowercase().run {
+                                                        endsWith(".jpg") || endsWith(".jpeg") || endsWith(".png") || endsWith(".webp") || endsWith(".gif")
+                                                    }
+                                                    if (isImage && base64.isNotEmpty()) {
+                                                        fotos.add(base64)
+                                                    }
+                                                    if (!isImage && base64.isNotEmpty()) {
+                                                        tieneArchivosNoImagen = true
+                                                    }
+                                                }
+                                            }
                                             val idEvidencia = doc.id
 
                                             // Trigger haptic physical motor vibration (400ms duration)
@@ -129,7 +212,8 @@ fun EduTaskWearApp() {
                                                 idEvidencia = idEvidencia,
                                                 nombreAlumno = nombreAlumno,
                                                 tituloTarea = tituloTarea,
-                                                foto = foto
+                                                fotos = fotos,
+                                                tieneArchivosNoImagen = tieneArchivosNoImagen
                                             )
                                         }
                                     }
@@ -153,8 +237,17 @@ fun EduTaskWearApp() {
                 else                           -> emptyList()
             }
             PendientesScreen(
+                nombreProfesor = nombreProfesor,
                 items         = items,
-                onSeleccionar = { evidencia -> destino = WearDestino.Calificar(evidencia) },
+                onSeleccionar = { evidencia ->
+                    destino = WearDestino.NuevaEntrega(
+                        idEvidencia = evidencia.id,
+                        nombreAlumno = evidencia.nombreAlumno,
+                        tituloTarea = evidencia.tituloTarea,
+                        fotos = evidencia.fotos,
+                        tieneArchivosNoImagen = evidencia.tieneArchivosNoImagen
+                    )
+                },
                 onRefrescar   = { vm.cargarPendientes() }
             )
         }
@@ -182,8 +275,10 @@ fun EduTaskWearApp() {
             NuevaEntregaScreen(
                 nombreAlumno = dest.nombreAlumno,
                 tituloTarea = dest.tituloTarea,
+                tieneArchivosNoImagen = dest.tieneArchivosNoImagen,
+                tieneFoto = dest.fotos.isNotEmpty(),
                 onVerFoto = {
-                    destino = WearDestino.VerFoto(foto = dest.foto, prevDestino = dest)
+                    destino = WearDestino.VerFoto(fotos = dest.fotos, prevDestino = dest)
                 },
                 onCalificar = {
                     destino = WearDestino.Calificar(
@@ -203,7 +298,7 @@ fun EduTaskWearApp() {
         // ── Visualización de Evidencia Fullscreen ─────────────────────────
         is WearDestino.VerFoto -> {
             VerFotoScreen(
-                foto = dest.foto,
+                fotos = dest.fotos,
                 onVolver = {
                     destino = dest.prevDestino
                 }
@@ -216,6 +311,8 @@ fun EduTaskWearApp() {
 fun NuevaEntregaScreen(
     nombreAlumno: String,
     tituloTarea: String,
+    tieneArchivosNoImagen: Boolean,
+    tieneFoto: Boolean,
     onVerFoto: () -> Unit,
     onCalificar: () -> Unit,
     onVolver: () -> Unit
@@ -223,17 +320,17 @@ fun NuevaEntregaScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(12.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = "Nueva Entrega",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -241,38 +338,57 @@ fun NuevaEntregaScreen(
 
             Text(
                 text = "$nombreAlumno entregó:\n$tituloTarea",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                maxLines = 3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            if (tieneArchivosNoImagen) {
+                Text(
+                    text = "Subió archivos. Ver en el móvil.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center
+                )
+            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onVerFoto,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Text("Ver Foto", style = MaterialTheme.typography.labelSmall)
-                }
+            Spacer(modifier = Modifier.height(2.dp))
 
-                Button(
-                    onClick = onCalificar,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+            if (!tieneFoto) {
+                Text(
+                    text = "Debe evaluar esta entrega en el móvil.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Calificar", style = MaterialTheme.typography.labelSmall)
+                    Button(
+                        onClick = onVerFoto,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Text("Ver Foto", style = MaterialTheme.typography.labelSmall)
+                    }
+
+                    Button(
+                        onClick = onCalificar,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text("Calificar", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
 
@@ -287,10 +403,12 @@ fun NuevaEntregaScreen(
 }
 
 @Composable
-fun VerFotoScreen(foto: String, onVolver: () -> Unit) {
+fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
+    var currentIndex by remember { mutableStateOf(0) }
+    val foto = remember(fotos, currentIndex) { fotos.getOrNull(currentIndex) ?: "" }
     val isUrl = remember(foto) { foto.startsWith("http://") || foto.startsWith("https://") }
     val bitmap = remember(foto) {
-        if (!isUrl) decodeBase64ToBitmap(foto) else null
+        if (!isUrl && foto.isNotEmpty()) decodeBase64ToBitmap(foto) else null
     }
 
     Box(
@@ -299,43 +417,93 @@ fun VerFotoScreen(foto: String, onVolver: () -> Unit) {
             .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
-        if (isUrl) {
-            AsyncImage(
-                model = foto,
-                contentDescription = "Evidencia Alumno",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-        } else if (bitmap != null) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Evidencia Alumno",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-        } else {
-            Text(
-                text = "Sin evidencia fotográfica",
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(16.dp)
-            )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Evidencia Foto ${currentIndex + 1}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            } else if (isUrl) {
+                AsyncImage(
+                    model = foto,
+                    contentDescription = "Evidencia Foto ${currentIndex + 1}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            } else {
+                Text(
+                    text = "Sin evidencia fotográfica",
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            contentAlignment = Alignment.BottomCenter
+        // Overlay elements: Page Indicator and Navigation buttons
+        Column(
+            modifier = Modifier.fillMaxSize().padding(6.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(
-                onClick = onVolver,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
-                ),
-                modifier = Modifier.height(36.dp)
+            if (fotos.size > 1) {
+                Text(
+                    text = "${currentIndex + 1} / ${fotos.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(1.dp))
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 4.dp)
             ) {
-                Text("Volver", style = MaterialTheme.typography.labelSmall)
+                if (fotos.size > 1) {
+                    Button(
+                        onClick = { currentIndex = if (currentIndex > 0) currentIndex - 1 else fotos.size - 1 },
+                        modifier = Modifier.size(32.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Text("<", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Button(
+                    onClick = onVolver,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f)
+                    ),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Volver", style = MaterialTheme.typography.labelSmall)
+                }
+
+                if (fotos.size > 1) {
+                    Button(
+                        onClick = { currentIndex = (currentIndex + 1) % fotos.size },
+                        modifier = Modifier.size(32.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Text(">", fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

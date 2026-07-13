@@ -17,7 +17,9 @@ data class EvidenciaPendiente(
     val id:           String = "",
     val nombreAlumno: String = "",
     val tituloTarea:  String = "",
-    val idAsignacion: String = ""
+    val idAsignacion: String = "",
+    val fotos:        List<String> = emptyList(),
+    val tieneArchivosNoImagen: Boolean = false
 )
 
 // ── Estados UI ───────────────────────────────────────────────────────────────
@@ -93,11 +95,35 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
                 val lista = evidencesSnap.documents
                     .filter { doc -> (doc.getString("idAsignacion") ?: "") in assignmentIds }
                     .map { doc ->
+                        val fotos = mutableListOf<String>()
+                        val legacyFoto = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: ""
+                        if (legacyFoto.isNotEmpty()) {
+                            fotos.add(legacyFoto)
+                        }
+                        var tieneArchivosNoImagen = false
+                        val archivosRaw = doc.get("archivos") as? List<*>
+                        archivosRaw?.forEach { item ->
+                            if (item is Map<*, *>) {
+                                val nombre = item["nombre"]?.toString() ?: ""
+                                val base64 = item["base64"]?.toString() ?: ""
+                                val isImage = nombre.lowercase().run {
+                                    endsWith(".jpg") || endsWith(".jpeg") || endsWith(".png") || endsWith(".webp") || endsWith(".gif")
+                                }
+                                if (isImage && base64.isNotEmpty()) {
+                                    fotos.add(base64)
+                                }
+                                if (!isImage && base64.isNotEmpty()) {
+                                    tieneArchivosNoImagen = true
+                                }
+                            }
+                        }
                         EvidenciaPendiente(
                             id           = doc.id,
                             nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno",
                             tituloTarea  = doc.getString("tituloTarea")  ?: "Sin título",
-                            idAsignacion = doc.getString("idAsignacion") ?: ""
+                            idAsignacion = doc.getString("idAsignacion") ?: "",
+                            fotos        = fotos,
+                            tieneArchivosNoImagen = tieneArchivosNoImagen
                         )
                     }
 

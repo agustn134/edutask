@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
@@ -18,6 +19,7 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 // ── Lista de evidencias pendientes ───────────────────────────────────────────
 @Composable
 fun PendientesScreen(
+    nombreProfesor:    String,
     items:             List<EvidenciaPendiente>,
     onSeleccionar:     (EvidenciaPendiente) -> Unit,
     onRefrescar:       () -> Unit
@@ -49,10 +51,23 @@ fun PendientesScreen(
                             .transformedHeight(this, transformSpec),
                         transformation = SurfaceTransformation(transformSpec)
                     ) {
-                        Text(
-                            text      = if (items.isEmpty()) "Sin pendientes" else "Pendientes (${items.size})",
-                            textAlign = TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Prof: $nombreProfesor",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text      = if (items.isEmpty()) "Sin pendientes" else "Pendientes (${items.size})",
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
@@ -102,6 +117,15 @@ fun PendientesScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (evidencia.tieneArchivosNoImagen) {
+                                Text(
+                                    text     = "Contiene archivos. Ver en móvil.",
+                                    style    = MaterialTheme.typography.labelSmall,
+                                    color    = MaterialTheme.colorScheme.error,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
@@ -119,5 +143,5 @@ private fun PreviewPendientes() {
         EvidenciaPendiente("2", "Juan Ramírez", "Diagramas UML"),
         EvidenciaPendiente("3", "Ana Torres",   "Actividad 5")
     )
-    PendientesScreen(items = mocks, onSeleccionar = {}, onRefrescar = {})
+    PendientesScreen(nombreProfesor = "Martha Elena", items = mocks, onSeleccionar = {}, onRefrescar = {})
 }

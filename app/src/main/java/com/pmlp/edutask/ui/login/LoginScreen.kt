@@ -110,6 +110,18 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
                     } catch (e: Exception) {
                         Log.e("WearSync", "Wearable API error", e)
                     }
+
+                    // Cloud fallback
+                    try {
+                        db.collection("sesion_wear").document("default")
+                            .set(hashMapOf(
+                                "idUsuario" to idUsuario,
+                                "nombre" to nombre,
+                                "timestamp" to com.google.firebase.Timestamp.now()
+                            ))
+                    } catch (e: Exception) {
+                        Log.e("WearSync", "Firestore fallback sync error on Login", e)
+                    }
                 }
 
                 isLoading = false
