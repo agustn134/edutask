@@ -33,6 +33,18 @@ fun FormularioUsuarioScreen(
 
     var isDropdownExpanded by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    val generatedMatricula = remember(nombre, rolSeleccionado) {
+        val roleLetter = when (rolSeleccionado) {
+            RolUsuario.Alumno -> "A"
+            RolUsuario.Profesor -> "P"
+            RolUsuario.Coordinador -> "C"
+        }
+        val initials = nombre.split(" ")
+            .filter { it.isNotBlank() }
+            .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+            .joinToString("")
+        if (initials.isEmpty()) "" else "$roleLetter-$initials"
+    }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(idUsuario, uiState) {
@@ -81,9 +93,11 @@ fun FormularioUsuarioScreen(
             )
 
             OutlinedTextField(
-                value = matricula,
-                onValueChange = { matricula = it },
+                value = if (isEdit) matricula else generatedMatricula,
+                onValueChange = { if (isEdit) matricula = it },
                 label = { Text("Matrícula") },
+                readOnly = !isEdit,
+                supportingText = if (!isEdit) { { Text("Generada automáticamente: Rol - Iniciales") } } else null,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -138,7 +152,8 @@ fun FormularioUsuarioScreen(
 
             Button(
                 onClick = {
-                    if (nombre.isBlank() || matricula.isBlank() || correo.isBlank() || contrasena.isBlank()) {
+                    val finalMatricula = if (isEdit) matricula else generatedMatricula
+                    if (nombre.isBlank() || finalMatricula.isBlank() || correo.isBlank() || contrasena.isBlank()) {
                         errorMsg = "Todos los campos son obligatorios"
                         return@Button
                     }
@@ -147,7 +162,7 @@ fun FormularioUsuarioScreen(
                     val usuario = Usuario(
                         idUsuario = idUsuario ?: "",
                         nombre = nombre,
-                        matricula = matricula,
+                        matricula = finalMatricula,
                         correo = correo,
                         contrasena = contrasena,
                         rol = rolSeleccionado

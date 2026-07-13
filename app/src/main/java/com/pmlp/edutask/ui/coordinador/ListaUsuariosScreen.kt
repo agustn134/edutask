@@ -13,7 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import com.pmlp.edutask.ui.components.ShimmerPlaceholder
 import com.pmlp.edutask.model.RolUsuario
 import com.pmlp.edutask.model.Usuario
 
@@ -29,6 +32,7 @@ fun ListaUsuariosScreen(
     val tabs = listOf("Alumnos", "Profesores")
 
     val uiState by viewModel.uiState.collectAsState()
+    var showDeleteUserDialog by remember { mutableStateOf<Usuario?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.fetchUsuarios()
@@ -68,8 +72,35 @@ fun ListaUsuariosScreen(
 
             when (val state = uiState) {
                 is CoordinadorUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        repeat(4) {
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        ShimmerPlaceholder(modifier = Modifier.width(160.dp).height(20.dp))
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            ShimmerPlaceholder(modifier = Modifier.size(16.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            ShimmerPlaceholder(modifier = Modifier.width(180.dp).height(16.dp))
+                                        }
+                                    }
+                                    ShimmerPlaceholder(modifier = Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                                }
+                            }
+                        }
                     }
                 }
                 is CoordinadorUiState.Error -> {
@@ -95,7 +126,7 @@ fun ListaUsuariosScreen(
                                 UsuarioItem(
                                     usuario = usuario,
                                     onEdit = { onNavigateToFormulario(usuario.idUsuario) },
-                                    onDelete = { viewModel.deleteUsuario(usuario.idUsuario) }
+                                    onDelete = { showDeleteUserDialog = usuario }
                                 )
                             }
                         }
@@ -104,6 +135,30 @@ fun ListaUsuariosScreen(
                 else -> {}
             }
         }
+    }
+
+    showDeleteUserDialog?.let { usuario ->
+        AlertDialog(
+            onDismissRequest = { showDeleteUserDialog = null },
+            title = { Text("Eliminar Usuario", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar al usuario \"${usuario.nombre}\" (${usuario.rol.name})? Se perderán todos sus datos y esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteUsuario(usuario.idUsuario)
+                        showDeleteUserDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteUserDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 

@@ -13,8 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.pmlp.edutask.ui.components.ShimmerPlaceholder
 import com.pmlp.edutask.model.Evento
 import com.pmlp.edutask.ui.EventosSharedViewModel
 import com.pmlp.edutask.ui.EventosUiState
@@ -30,6 +33,7 @@ fun ListaEventosScreen(
     onNavigateToFormulario: (String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showDeleteEventoDialog by remember { mutableStateOf<Evento?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.fetchEventos()
@@ -59,8 +63,34 @@ fun ListaEventosScreen(
         ) {
             when (val state = uiState) {
                 is EventosUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        repeat(4) {
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        ShimmerPlaceholder(modifier = Modifier.width(180.dp).height(20.dp).weight(1f))
+                                        ShimmerPlaceholder(modifier = Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        ShimmerPlaceholder(modifier = Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                                    }
+                                    ShimmerPlaceholder(modifier = Modifier.width(280.dp).height(16.dp))
+                                    ShimmerPlaceholder(modifier = Modifier.width(120.dp).height(14.dp))
+                                    ShimmerPlaceholder(modifier = Modifier.width(90.dp).height(20.dp), shape = RoundedCornerShape(10.dp))
+                                }
+                            }
+                        }
                     }
                 }
                 is EventosUiState.Error -> {
@@ -84,7 +114,7 @@ fun ListaEventosScreen(
                                 EventoItem(
                                     evento = evento,
                                     onEdit = { onNavigateToFormulario(evento.idEvento) },
-                                    onDelete = { viewModel.deleteEvento(evento.idEvento) }
+                                    onDelete = { showDeleteEventoDialog = evento }
                                 )
                             }
                         }
@@ -93,6 +123,30 @@ fun ListaEventosScreen(
                 else -> {}
             }
         }
+    }
+
+    showDeleteEventoDialog?.let { evento ->
+        AlertDialog(
+            onDismissRequest = { showDeleteEventoDialog = null },
+            title = { Text("Eliminar Evento", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar el evento o anuncio \"${evento.titulo}\"? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteEvento(evento.idEvento)
+                        showDeleteEventoDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteEventoDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
