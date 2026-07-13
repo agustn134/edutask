@@ -233,6 +233,9 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
                 idTarea = idTarea,
                 onTareaCreadaExitosa = {
                     navController.popBackStack()
+                },
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }

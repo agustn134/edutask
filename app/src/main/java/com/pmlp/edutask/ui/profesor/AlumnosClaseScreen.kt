@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pmlp.edutask.ui.components.ShimmerPlaceholder
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -98,19 +99,52 @@ fun AlumnosClaseScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
     ) { paddingValues ->
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                CircularProgressIndicator()
+                ShimmerPlaceholder(modifier = Modifier.width(180.dp).height(28.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                repeat(4) {
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                ShimmerPlaceholder(modifier = Modifier.width(150.dp).height(20.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ShimmerPlaceholder(modifier = Modifier.size(16.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    ShimmerPlaceholder(modifier = Modifier.width(110.dp).height(16.dp))
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    ShimmerPlaceholder(modifier = Modifier.size(16.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    ShimmerPlaceholder(modifier = Modifier.width(170.dp).height(16.dp))
+                                }
+                            }
+                            ShimmerPlaceholder(modifier = Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                        }
+                    }
+                }
             }
         } else {
             LazyColumn(

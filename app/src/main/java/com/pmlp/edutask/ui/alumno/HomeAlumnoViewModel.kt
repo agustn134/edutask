@@ -213,7 +213,11 @@ class HomeAlumnoViewModel : ViewModel() {
                                     if (evSnapshot != null && !evSnapshot.isEmpty) {
                                         val evidenciaDoc = evSnapshot.documents[0]
                                         val estadoStr = evidenciaDoc.getString("estado")
-                                        val idEvidencia = evidenciaDoc.id
+                                        val idEvidenciaRaw = evidenciaDoc.get("idEvidencia")
+                                        val idEvidencia = when (idEvidenciaRaw) {
+                                            is Number -> idEvidenciaRaw.toLong().toString()
+                                            else -> idEvidenciaRaw?.toString() ?: evidenciaDoc.id
+                                        }
                                         
                                         val estadoEvidencia = when (estadoStr) {
                                             "Aprobada" -> EstadoEvidencia.Aprobada
@@ -230,8 +234,21 @@ class HomeAlumnoViewModel : ViewModel() {
                                                     var calificacion: Int? = null
                                                     var comentario: String? = null
                                                     if (!califSnapshot.isEmpty) {
-                                                        calificacion = califSnapshot.documents[0].getLong("valor")?.toInt()
+                                                        val valorRaw = califSnapshot.documents[0].get("valor")
+                                                        calificacion = when (valorRaw) {
+                                                            is Number -> valorRaw.toInt()
+                                                            is String -> valorRaw.toIntOrNull()
+                                                            else -> null
+                                                        }
                                                         comentario = califSnapshot.documents[0].getString("comentario")
+                                                    }
+                                                    if (calificacion == null) {
+                                                        val califRaw = evidenciaDoc.get("calificacion")
+                                                        calificacion = when (califRaw) {
+                                                            is Number -> califRaw.toInt()
+                                                            is String -> califRaw.toIntOrNull()
+                                                            else -> null
+                                                        }
                                                     }
                                                     
                                                     paresTareasMap[idAsignacion] = TareaItem(tarea, estadoEvidencia, idAsignacion, calificacion, comentario, idEvidencia)
@@ -353,8 +370,10 @@ class HomeAlumnoViewModel : ViewModel() {
             val currentState = _uiState.value
             _uiState.value = HomeAlumnoState.Loading
             try {
-                // 1. Verificar si la clase existe
-                val claseDoc = db.collection("clases").document(codigoClase).get().await()
+                // 1. Normalizar y verificar si la clase existe
+                val codeNormalized = codigoClase.trim().uppercase()
+                val claseDoc = db.collection("clases").document(codeNormalized).get().await()
+
                 if (!claseDoc.exists()) {
                     _uiState.value = HomeAlumnoState.Error("El código de clase no existe o es incorrecto.")
                     return@launch
@@ -362,7 +381,7 @@ class HomeAlumnoViewModel : ViewModel() {
 
                 // 2. Verificar si el alumno ya está inscrito
                 val inscripciones = db.collection("clase_alumno")
-                    .whereEqualTo("idClase", codigoClase)
+                    .whereEqualTo("idClase", codeNormalized)
                     .whereEqualTo("idUsuario", idUsuario)
                     .get()
                     .await()
@@ -374,14 +393,14 @@ class HomeAlumnoViewModel : ViewModel() {
 
                 // 3. Inscribir al alumno
                 val nuevaInscripcion = hashMapOf(
-                    "idClase" to codigoClase,
+                    "idClase" to codeNormalized,
                     "idUsuario" to idUsuario
                 )
                 db.collection("clase_alumno").add(nuevaInscripcion).await()
 
                 // 4. Buscar tareas de la clase y crear asignaciones retroactivamente
                 val tareasSnapshot = db.collection("tareas")
-                    .whereEqualTo("idClase", codigoClase)
+                    .whereEqualTo("idClase", codeNormalized)
                     .get()
                     .await()
 

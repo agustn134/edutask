@@ -1,5 +1,6 @@
 package com.pmlp.edutask.ui.alumno
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -136,9 +137,10 @@ fun InicioContent(
 fun EventoCarouselCard(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
+    var showDialog by remember { mutableStateOf(false) }
 
     OutlinedCard(
-        modifier = Modifier.width(260.dp).height(120.dp),
+        modifier = Modifier.width(260.dp).height(120.dp).clickable { showDialog = true },
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -147,5 +149,27 @@ fun EventoCarouselCard(evento: Evento) {
             Text(evento.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(evento.titulo, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Publicado: $fechaFormat",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(evento.descripcion, style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 }

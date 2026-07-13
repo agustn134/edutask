@@ -2,6 +2,7 @@ package com.pmlp.edutask.ui.profesor
 
 import android.app.Activity
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,8 +11,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import com.pmlp.edutask.ui.components.ShimmerPlaceholder
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -37,6 +41,8 @@ import com.pmlp.edutask.ui.EventosSharedViewModel
 import com.pmlp.edutask.ui.EventosUiState
 import com.pmlp.edutask.model.Evento
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -77,7 +83,8 @@ fun HomeProfesorScreen(
     onVerEstadisticas: (String, String) -> Unit = { _, _ -> },
     onLogout: () -> Unit     = {}
 ) {
-    val winSize   = calculateWindowSizeClass(activity = androidx.compose.ui.platform.LocalContext.current as Activity)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val winSize   = calculateWindowSizeClass(activity = context as Activity)
     val isCompact = winSize.widthSizeClass == WindowWidthSizeClass.Compact
 
     var selectedNav   by remember { mutableIntStateOf(0) }
@@ -93,6 +100,22 @@ fun HomeProfesorScreen(
     // Estado para manejar las evidencias reales traídas de Firebase
     var listaEvidencias by remember { mutableStateOf<List<EvidenciaTarea>>(emptyList()) }
     val db = remember { FirebaseFirestore.getInstance() }
+    
+    var showDeleteTareaDialog by remember { mutableStateOf<String?>(null) }
+    var showDeleteClaseDialog by remember { mutableStateOf<String?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    
+    var correoProfesor by remember { mutableStateOf("") }
+    LaunchedEffect(idUsuario) {
+        if (idUsuario.isNotBlank()) {
+            db.collection("usuarios").document(idUsuario).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        correoProfesor = doc.getString("correo") ?: ""
+                    }
+                }
+        }
+    }
 
     // Real-time listener for classes of this professor
     var listaClases by remember { mutableStateOf<List<ClaseInfo>>(emptyList()) }
@@ -253,6 +276,39 @@ fun HomeProfesorScreen(
         eventosViewModel.fetchEventos()
     }
 
+    LaunchedEffect(idUsuario, nombreProfesor) {
+        if (idUsuario.isNotBlank()) {
+            // 1. Sincronización local vía Wearable API
+            try {
+                val dataClient = com.google.android.gms.wearable.Wearable.getDataClient(context)
+                val putDataReq = com.google.android.gms.wearable.PutDataMapRequest.create("/usuario_logueado").run {
+                    dataMap.putString("idUsuario", idUsuario)
+                    dataMap.putString("nombre", nombreProfesor)
+                    asPutDataRequest()
+                }
+                dataClient.putDataItem(putDataReq)
+                    .addOnSuccessListener { android.util.Log.d("WearSync", "Session synced from Home: $idUsuario") }
+                    .addOnFailureListener { android.util.Log.e("WearSync", "Failed to sync session from Home", it) }
+            } catch (e: java.lang.Exception) {
+                android.util.Log.e("WearSync", "Wearable API error on Home", e)
+            }
+
+            // 2. Sincronización en la nube vía Firestore (Fallback)
+            try {
+                val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                db.collection("sesion_wear").document("default")
+                    .set(hashMapOf(
+                        "idUsuario" to idUsuario,
+                        "nombre" to nombreProfesor,
+                        "timestamp" to com.google.firebase.Timestamp.now()
+                    ))
+                    .addOnSuccessListener { android.util.Log.d("WearSync", "Session synced to Firestore fallback: $idUsuario") }
+            } catch (e: java.lang.Exception) {
+                android.util.Log.e("WearSync", "Firestore fallback error on Home", e)
+            }
+        }
+    }
+
     // Diálogo para Crear Clase Nueva
     if (showClassDialog) {
         AlertDialog(
@@ -336,9 +392,9 @@ fun HomeProfesorScreen(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor   = MaterialTheme.colorScheme.onBackground,
         topBar = {
-            LargeTopAppBar(
+            TopAppBar(
                 navigationIcon = {
-                    Surface(Modifier.padding(start = 12.dp).size(40.dp),
+                    Surface(Modifier.padding(start = 12.dp, end = 12.dp).size(40.dp),
                         shape = MaterialTheme.shapes.extraLarge,
                         color = MaterialTheme.colorScheme.secondaryContainer) {
                         Box(contentAlignment = Alignment.Center) {
@@ -349,16 +405,16 @@ fun HomeProfesorScreen(
                 },
                 title = {
                     Column {
-                        Text("Hola, $nombreProfesor", style = MaterialTheme.typography.headlineSmall,
+                        Text("Hola, ${nombreProfesor.substringBefore(" ")}!", style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(if(selectedNav == 2) "Gestión Académica" else claseActual, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
                 actions = {
-                    IconButton(onClick = onLogout) { Icon(Icons.Default.Logout, contentDescription = "Cerrar Sesión") }
+                    IconButton(onClick = onLogout) { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar Sesión") }
                 },
-                colors = TopAppBarDefaults.largeTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -405,49 +461,157 @@ fun HomeProfesorScreen(
                 (eventosState as EventosUiState.Success).eventos
             } else emptyList()
 
-            when (selectedNav) {
-                0 -> InicioContent(
-                    pendientes = pendientes,
-                    claseActual = claseActual,
-                    eventos = eventos,
-                    evidencias = listaEvidencias,
-                    onCrearTarea = { onCrearTarea(idUsuario, null) },
-                    onVerClick = { onVerEvidencia(it.idEvidencia) }
-                )
-                1 -> TareasContent(
-                    tareas = listaTareas,
-                    clases = listaClases,
-                    idUsuario = idUsuario,
-                    onEditTarea = onCrearTarea,
-                    onDeleteTarea = { idTarea ->
-                        db.collection("tareas").document(idTarea).delete()
-                    },
-                    onVerEstadisticas = onVerEstadisticas
-                )
-                2 -> ClasesContent(
-                    clases = listaClases,
-                    inscripciones = inscripcionesMap,
-                    onEditClase = { clase ->
-                        nuevaClaseNombre = clase.nombre
-                        nuevaClaseDesc = clase.descripcion
-                        nuevaClaseEnlace = clase.enlace
-                        editingClaseId = clase.idClase
-                        showClassDialog = true
-                    },
-                    onDeleteClase = { idClase ->
-                        db.collection("clases").document(idClase).delete()
-                    },
-                    onVerAlumnos = onVerAlumnos
-                )
-                3 -> PerfilContent(
-                    nombre = nombreProfesor,
-                    clasesCount = listaClases.size,
-                    tareasCount = listaTareas.size,
-                    evaluacionesCount = listaEvidencias.count { it.estado != EstadoEvidencia.Pendiente },
-                    onLogout = onLogout
-                )
+            @OptIn(ExperimentalMaterial3Api::class)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    scope.launch {
+                        kotlinx.coroutines.delay(800)
+                        isRefreshing = false
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (isRefreshing) {
+                    when (selectedNav) {
+                        0 -> InicioSkeleton()
+                        1 -> TareasSkeleton()
+                        2 -> ClasesSkeleton()
+                        3 -> PerfilContent(
+                            nombre = nombreProfesor,
+                            clasesCount = listaClases.size,
+                            tareasCount = listaTareas.size,
+                            evaluacionesCount = listaEvidencias.count { it.estado != EstadoEvidencia.Pendiente },
+                            correo = correoProfesor,
+                            onGuardarCambios = { nuevoCorreo, nuevaContrasena ->
+                                val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
+                                if (nuevaContrasena.isNotBlank()) {
+                                    updates["contrasena"] = nuevaContrasena
+                                }
+                                db.collection("usuarios").document(idUsuario).update(updates)
+                                    .addOnSuccessListener {
+                                        correoProfesor = nuevoCorreo
+                                        android.widget.Toast.makeText(context, "Cuenta actualizada", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                    .addOnFailureListener {
+                                        android.widget.Toast.makeText(context, "Error al actualizar", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                            },
+                            onLogout = onLogout
+                        )
+                    }
+                } else {
+                    when (selectedNav) {
+                        0 -> InicioContent(
+                            pendientes = pendientes,
+                            claseActual = claseActual,
+                            eventos = eventos,
+                            evidencias = listaEvidencias,
+                            onCrearTarea = { onCrearTarea(idUsuario, null) },
+                            onVerClick = { onVerEvidencia(it.idEvidencia) }
+                        )
+                        1 -> TareasContent(
+                            tareas = listaTareas,
+                            clases = listaClases,
+                            idUsuario = idUsuario,
+                            onEditTarea = onCrearTarea,
+                            onDeleteTarea = { idTarea ->
+                                showDeleteTareaDialog = idTarea
+                            },
+                            onVerEstadisticas = onVerEstadisticas
+                        )
+                        2 -> ClasesContent(
+                            clases = listaClases,
+                            inscripciones = inscripcionesMap,
+                            onEditClase = { clase ->
+                                nuevaClaseNombre = clase.nombre
+                                nuevaClaseDesc = clase.descripcion
+                                nuevaClaseEnlace = clase.enlace
+                                editingClaseId = clase.idClase
+                                showClassDialog = true
+                            },
+                            onDeleteClase = { idClase ->
+                                showDeleteClaseDialog = idClase
+                            },
+                            onVerAlumnos = onVerAlumnos
+                        )
+                        3 -> PerfilContent(
+                            nombre = nombreProfesor,
+                            clasesCount = listaClases.size,
+                            tareasCount = listaTareas.size,
+                            evaluacionesCount = listaEvidencias.count { it.estado != EstadoEvidencia.Pendiente },
+                            correo = correoProfesor,
+                            onGuardarCambios = { nuevoCorreo, nuevaContrasena ->
+                                val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
+                                if (nuevaContrasena.isNotBlank()) {
+                                    updates["contrasena"] = nuevaContrasena
+                                }
+                                db.collection("usuarios").document(idUsuario).update(updates)
+                                    .addOnSuccessListener {
+                                        correoProfesor = nuevoCorreo
+                                        android.widget.Toast.makeText(context, "Cuenta actualizada", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                    .addOnFailureListener {
+                                        android.widget.Toast.makeText(context, "Error al actualizar", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                            },
+                            onLogout = onLogout
+                        )
+                    }
+                }
             }
         }
+    }
+
+    showDeleteTareaDialog?.let { idTarea ->
+        val tarea = listaTareas.find { it.idTarea == idTarea }
+        AlertDialog(
+            onDismissRequest = { showDeleteTareaDialog = null },
+            title = { Text("Eliminar Actividad", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar la actividad \"${tarea?.titulo ?: ""}\"? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        db.collection("tareas").document(idTarea).delete()
+                        showDeleteTareaDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteTareaDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    showDeleteClaseDialog?.let { idClase ->
+        val clase = listaClases.find { it.idClase == idClase }
+        AlertDialog(
+            onDismissRequest = { showDeleteClaseDialog = null },
+            title = { Text("Eliminar Clase", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar la clase \"${clase?.nombre ?: ""}\"? Se perderán todos los datos asociados en cascada. Esta acción no se puede deshacer.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        db.collection("clases").document(idClase).delete()
+                        showDeleteClaseDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteClaseDialog = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
@@ -793,6 +957,8 @@ private fun PerfilContent(
     clasesCount: Int,
     tareasCount: Int,
     evaluacionesCount: Int,
+    correo: String,
+    onGuardarCambios: (String, String) -> Unit,
     onLogout: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -874,7 +1040,7 @@ private fun PerfilContent(
         
         ShortcutItem(icon = Icons.Default.Email, title = "Contacto Administrativo", subtitle = "soporte.docentes@edutask.edu")
         Spacer(Modifier.height(12.dp))
-        ShortcutItem(icon = Icons.Default.Settings, title = "Ajustes de Cuenta", subtitle = "Cambiar contraseña y preferencias")
+        AjustesCuentaAccordion(correoActual = correo, onGuardarCambios = onGuardarCambios)
         Spacer(Modifier.height(12.dp))
         ShortcutItem(icon = Icons.Default.HelpOutline, title = "Soporte Técnico", subtitle = "Reportar un problema con la app")
         Spacer(Modifier.height(12.dp))
@@ -884,6 +1050,114 @@ private fun PerfilContent(
             subtitle = "Salir de la cuenta de forma segura",
             onClick = onLogout
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AjustesCuentaAccordion(
+    correoActual: String = "",
+    onGuardarCambios: (String, String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    var correo by remember(correoActual) { mutableStateOf(correoActual) }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        onClick = { expanded = !expanded },
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp))
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Ajustes de Cuenta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(text = "Cambiar contraseña y correo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            if (expanded) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = correo,
+                        onValueChange = { correo = it },
+                        label = { Text("Correo Electrónico") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Nueva Contraseña") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirmar Contraseña") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        isError = password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword
+                    )
+                    
+                    if (password.isNotEmpty() && confirmPassword.isNotEmpty() && password != confirmPassword) {
+                        Text(
+                            text = "Las contraseñas no coinciden",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            onGuardarCambios(correo, password)
+                            expanded = false
+                            password = ""
+                            confirmPassword = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        enabled = correo.isNotBlank() && (password.isEmpty() || password == confirmPassword)
+                    ) {
+                        Text("Guardar Cambios")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -988,9 +1262,10 @@ private fun generateShortCode(): String {
 fun EventoCarouselCardProfesor(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
+    var showDialog by remember { mutableStateOf(false) }
 
     OutlinedCard(
-        modifier = Modifier.width(260.dp).height(120.dp),
+        modifier = Modifier.width(260.dp).height(120.dp).clickable { showDialog = true },
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -998,6 +1273,136 @@ fun EventoCarouselCardProfesor(evento: Evento) {
             Spacer(Modifier.height(4.dp))
             Text(evento.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Text(fechaFormat, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(evento.titulo, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Publicado: $fechaFormat",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(evento.descripcion, style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun InicioSkeleton() {
+    Column(
+        modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(180.dp).height(24.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(2) {
+                OutlinedCard(
+                    modifier = androidx.compose.ui.Modifier.width(260.dp).height(120.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(modifier = androidx.compose.ui.Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(160.dp).height(20.dp))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(220.dp).height(16.dp))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(60.dp).height(12.dp))
+                    }
+                }
+            }
+        }
+        
+        Card(modifier = androidx.compose.ui.Modifier.fillMaxWidth().height(80.dp)) {
+            Box(modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.CenterStart) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(140.dp).height(18.dp))
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(200.dp).height(14.dp))
+                }
+            }
+        }
+        
+        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(160.dp).height(24.dp))
+        repeat(2) {
+            OutlinedCard(
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Row(modifier = androidx.compose.ui.Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = androidx.compose.ui.Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(180.dp).height(16.dp))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(120.dp).height(14.dp))
+                    }
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(60.dp).height(28.dp), shape = RoundedCornerShape(14.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TareasSkeleton() {
+    Column(
+        modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(4) {
+                ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(70.dp).height(32.dp), shape = RoundedCornerShape(16.dp))
+            }
+        }
+        repeat(3) {
+            OutlinedCard(
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(modifier = androidx.compose.ui.Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(200.dp).height(20.dp))
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(280.dp).height(16.dp))
+                    Row(modifier = androidx.compose.ui.Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(100.dp).height(24.dp), shape = RoundedCornerShape(12.dp))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(120.dp).height(16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClasesSkeleton() {
+    Column(
+        modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(150.dp).height(24.dp))
+        repeat(3) {
+            OutlinedCard(
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(modifier = androidx.compose.ui.Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(modifier = androidx.compose.ui.Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(160.dp).height(20.dp).weight(1f))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                        Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                        Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
+                        ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.size(24.dp), shape = androidx.compose.foundation.shape.CircleShape)
+                    }
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(260.dp).height(16.dp))
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(180.dp).height(14.dp))
+                    ShimmerPlaceholder(modifier = androidx.compose.ui.Modifier.width(140.dp).height(24.dp), shape = RoundedCornerShape(6.dp))
+                }
+            }
         }
     }
 }

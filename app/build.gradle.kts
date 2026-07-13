@@ -69,5 +69,6 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation(libs.play.services.wearable)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

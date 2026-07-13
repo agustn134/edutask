@@ -79,6 +79,27 @@ fun EnviarEvidenciaScreen(
         }
     }
 
+    var archivosTarea by remember { mutableStateOf<List<Map<String, String>>>(emptyList()) }
+    LaunchedEffect(tarea.idTarea) {
+        if (tarea.idTarea.isNotBlank()) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance().collection("tareas").document(tarea.idTarea).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) {
+                        val rawArchivos = doc.get("archivos") as? List<*>
+                        val list = mutableListOf<Map<String, String>>()
+                        rawArchivos?.forEach { item ->
+                            if (item is Map<*, *>) {
+                                val nombre = item["nombre"]?.toString() ?: ""
+                                val base64 = item["base64"]?.toString() ?: ""
+                                list.add(mapOf("nombre" to nombre, "base64" to base64))
+                            }
+                        }
+                        archivosTarea = list
+                    }
+                }
+        }
+    }
+
     // ── Estados para Múltiples Archivos y Vínculos ───────────────────────────
     var archivosSubir by remember { mutableStateOf(listOf<ArchivoSubir>()) }
     var vinculos by remember { mutableStateOf(listOf<String>()) }
@@ -473,6 +494,41 @@ fun EnviarEvidenciaScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+
+                        // Material complementario de la tarea
+                        if (archivosTarea.isNotEmpty()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            Text(
+                                "Material Adjunto del Profesor:",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            archivosTarea.forEach { archivo ->
+                                val nombre = archivo["nombre"] ?: "archivo"
+                                val base64 = archivo["base64"] ?: ""
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = nombre,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    IconButton(
+                                        onClick = { abrirArchivoBase64(context, base64, nombre) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = "Descargar material",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Fecha límite

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Timestamp
+import com.pmlp.edutask.ui.components.ShimmerPlaceholder
 import com.google.firebase.firestore.FirebaseFirestore
 import com.pmlp.edutask.model.EstadoEvidencia
 import com.pmlp.edutask.model.EvidenciaTarea
@@ -47,6 +48,7 @@ fun EvaluarTareaScreen(
     idUsuario: String, // Profesor ID
     onEvaluadoExitoso: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val db = remember { FirebaseFirestore.getInstance() }
 
@@ -88,6 +90,24 @@ fun EvaluarTareaScreen(
                             else -> idAsignacionRaw?.toString() ?: ""
                         }
 
+                        val archivosList = mutableListOf<Map<String, String>>()
+                        val rawArchivos = doc.get("archivos") as? List<*>
+                        rawArchivos?.forEach { item ->
+                            if (item is Map<*, *>) {
+                                val nombre = item["nombre"]?.toString() ?: ""
+                                val base64 = item["base64"]?.toString() ?: ""
+                                archivosList.add(mapOf("nombre" to nombre, "base64" to base64))
+                            }
+                        }
+
+                        val vinculosList = mutableListOf<String>()
+                        val rawVinculos = doc.get("vinculos") as? List<*>
+                        rawVinculos?.forEach { item ->
+                            if (item != null) {
+                                vinculosList.add(item.toString())
+                            }
+                        }
+
                         evidencia = EvidenciaTarea(
                             idEvidencia = idEvidenciaStr,
                             tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
@@ -97,8 +117,13 @@ fun EvaluarTareaScreen(
                             idAsignacion = idAsignacionStr,
                             nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo",
                             nombreArchivo = doc.getString("nombreArchivo"),
-                            textoEvidencia = doc.getString("textoEvidencia")
+                            textoEvidencia = doc.getString("textoEvidencia"),
+                            archivos = archivosList,
+                            vinculos = vinculosList
                         )
+                    } else {
+                        Toast.makeText(context, "Esta entrega ha sido anulada por el alumno.", Toast.LENGTH_LONG).show()
+                        onEvaluadoExitoso()
                     }
                 }
         }
@@ -142,19 +167,60 @@ fun EvaluarTareaScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
     ) { paddingValues ->
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                CircularProgressIndicator()
+                // Card Details Skeleton
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        ShimmerPlaceholder(modifier = Modifier.width(220.dp).height(24.dp))
+                        ShimmerPlaceholder(modifier = Modifier.width(160.dp).height(18.dp))
+                        ShimmerPlaceholder(modifier = Modifier.width(180.dp).height(16.dp))
+                    }
+                }
+                
+                // Uploaded Files / Evidence Section Skeleton
+                Spacer(modifier = Modifier.height(8.dp))
+                ShimmerPlaceholder(modifier = Modifier.width(140.dp).height(20.dp))
+                
+                repeat(2) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ShimmerPlaceholder(modifier = Modifier.size(36.dp), shape = RoundedCornerShape(6.dp))
+                            Spacer(Modifier.width(12.dp))
+                            ShimmerPlaceholder(modifier = Modifier.width(180.dp).height(16.dp))
+                        }
+                    }
+                }
+                
+                // Evaluation form Skeleton
+                Spacer(modifier = Modifier.height(8.dp))
+                ShimmerPlaceholder(modifier = Modifier.width(120.dp).height(20.dp))
+                ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(8.dp))
+                ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(100.dp), shape = RoundedCornerShape(8.dp))
+                ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(8.dp))
             }
         } else {
             val ev = evidencia
@@ -284,23 +350,44 @@ fun EvaluarTareaScreen(
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(nombre, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(200.dp))
-                                            }
-                                            val ctx = LocalContext.current
-                                            IconButton(onClick = { 
-                                                if (base64Data.isNotBlank()) {
-                                                    abrirArchivoBase64(ctx, base64Data, nombre)
+                                        Column {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(nombre, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                                 }
-                                            }) {
-                                                Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                                val ctx = LocalContext.current
+                                                IconButton(onClick = { 
+                                                    if (base64Data.isNotBlank()) {
+                                                        abrirArchivoBase64(ctx, base64Data, nombre)
+                                                    }
+                                                }) {
+                                                    Icon(Icons.Default.OpenInNew, contentDescription = "Abrir", tint = MaterialTheme.colorScheme.primary)
+                                                }
+                                            }
+
+                                            val isImage = nombre.lowercase().run {
+                                                endsWith(".jpg") || endsWith(".jpeg") || endsWith(".png") || endsWith(".webp") || endsWith(".gif")
+                                            }
+                                            if (isImage && base64Data.isNotBlank()) {
+                                                val bitmap = remember(base64Data) { decodeBase64ToBitmap(base64Data) }
+                                                if (bitmap != null) {
+                                                    Image(
+                                                        bitmap = bitmap.asImageBitmap(),
+                                                        contentDescription = "Vista previa de $nombre",
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(200.dp)
+                                                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                                                            .clip(RoundedCornerShape(8.dp)),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                }
                                             }
                                         }
                                     }
