@@ -1,29 +1,8 @@
-Listed directory edutask
-Viewed Diagrama%20de%20Clases%E2%80%94EduTask.md:1-167
-Viewed poblar_base_datos.py:1-503
-Listed directory app
-Viewed settings.gradle.kts:1-29
-Listed directory main
-Viewed AndroidManifest.xml:1-43
-Listed directory java
-Searched for "package "
-Searched for "package "
-Searched for "package "
-Viewed MainActivitytv.kt:1-47
-Viewed MainActivityWear.kt:1-524
-Viewed MainActivity.kt:1-55
-Viewed build.gradle.kts:1-6
-Listed directory gradle
-Viewed libs.versions.toml:1-64
-Viewed build.gradle.kts:1-74
-
-Aquí tienes la información detallada sobre el proyecto **EduTask**:
 
 ### 1. Nombre del proyecto
 * **EduTask**
 
 ### 2. Nombres de los estudiantes
-De acuerdo con las iniciales presentes en la configuración de Firebase (`cmpm` y `alp`) y los datos correspondientes en el script de carga de base de datos, los desarrolladores y estudiantes son:
 * **Carlos Manuel Palma Muñoz**
 * **Agustin Lopez Parra**
 
