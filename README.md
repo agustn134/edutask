@@ -122,3 +122,4 @@ A continuación demostramos el funcionamiento de las distintas partes del sistem
 **6. Base de Datos (Firebase)**
 <img width="1920" height="1080" alt="{FCFEF5E6-69CB-4292-8C93-3FA6B453C99A}" src="https://github.com/user-attachments/assets/395bf70a-5647-4b7a-ad19-73a30fd1cf06" />
 
+<img width="1920" height="1080" alt="{55631EB2-2F2E-4DF3-9F86-01498EA9A92A}" src="https://github.com/user-attachments/assets/fc061273-b1c6-45d2-89a9-9e67e141a72a" />
