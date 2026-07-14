@@ -91,6 +91,13 @@ Para probar el proyecto en tu computadora, estos son los pasos a seguir:
 A continuación demostramos el funcionamiento de las distintas partes del sistema:
 
 **1. Módulo del Alumno (App Móvil)**
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/50e3f05c-ca6d-425b-9614-43cfeadce754" />
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/1daa8231-faa9-4112-aa3d-75e39826c815" />
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/4a8b7735-b963-4a15-bf39-ab2f03637072" />
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/bb6ba882-8194-45ae-8658-fffca4fa65a8" />
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/8fd93c65-d2ab-48dd-a281-6f7a7388d2b2" />
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/72306a37-18ba-494c-9ef4-4bb023ba2b3f" />
+<img width="720" height="1612" alt="imagen" src="https://github.com/user-attachments/assets/57b0bb28-0165-4b15-a3f4-dbc975c8c2e2" />
 
 
 **2. Módulo del Profesor (App Móvil)**
@@ -107,3 +114,5 @@ A continuación demostramos el funcionamiento de las distintas partes del sistem
 
 
 **6. Base de Datos (Firebase)**
+<img width="1920" height="1080" alt="{FCFEF5E6-69CB-4292-8C93-3FA6B453C99A}" src="https://github.com/user-attachments/assets/395bf70a-5647-4b7a-ad19-73a30fd1cf06" />
+
