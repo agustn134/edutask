@@ -1,77 +1,109 @@
+# EduTask
 
-### 1. Nombre del proyecto
-* **EduTask**
-
-### 2. Nombres de los estudiantes
-* **Carlos Manuel Palma Muñoz**
-* **Agustin Lopez Parra**
+**Proyecto Final: Desarrollo para Dispositivos Inteligentes 2026**
 
 ---
 
-### 3. Objetivo del proyecto
-Desarrollar una plataforma educativa multidispositivo (**Android Móvil/Tablet**, **Wear OS Smartwatch** y **Android TV**) que optimice la gestión escolar, permitiendo a los coordinadores organizar eventos, a los profesores asignar y calificar tareas de forma ágil (incluso desde el reloj inteligente mediante notificaciones táctiles y vibración), y a los alumnos visualizar sus clases, subir evidencias fotográficas o de archivos y ver sus calificaciones en tiempo real.
+### Datos del Equipo
+* **Materia:** Desarrollo para Dispositivos Inteligentes
+* **Grupo:** GIDS6093
+* **Estudiantes:**
+  * Carlos Manuel Palma Muñoz
+  * Agustin Lopez Parra
 
 ---
 
-### 4. Descripción de las funcionalidades
-
-* **Módulo Alumno (Dispositivos Móviles)**:
-  * Visualización de clases en las que está inscrito.
-  * Seguimiento de tareas pendientes y completadas con fechas límite.
-  * Envío de evidencias escolares capturando fotos con la cámara o cargando archivos.
-  * Consulta de calificaciones finales e historial de comentarios de retroalimentación de los profesores.
-  * Agenda de eventos institucionales y escolares.
-
-* **Módulo Profesor (Móvil & Wear OS)**:
-  * **Móvil**: Creación de tareas asignadas a clases, control de la lista de alumnos, consulta de analíticas y estadísticas de rendimiento, y evaluación detallada de evidencias con comentarios.
-  * **Wear OS (Smartwatch)**: Recepción de alertas de vibración háptica ante nuevas entregas, visualización en pantalla completa de fotos de evidencia y sistema de calificación rápida con un solo toque (notas del 5 al 10).
-
-* **Módulo Coordinador (Móvil)**:
-  * Gestión total de usuarios: registro, edición y control de roles (Alumno, Profesor, Coordinador).
-  * Agenda Escolar: Creación, actualización y eliminación de eventos institucionales como evaluaciones, entrega de boletas y semanas culturales.
-
-* **Módulo TV (Android TV)**:
-  * Interfaz base diseñada para mostrar avisos y pantallas de bienvenida generales a nivel institucional.
+### Objetivo del Proyecto
+El objetivo de **EduTask** es crear una plataforma educativa completa que funcione en diferentes dispositivos (celulares, relojes inteligentes y, próximamente, pantallas de TV). Buscamos hacer más fácil la vida escolar: los alumnos pueden ver sus tareas y subir fotos de sus trabajos, los profesores pueden calificar rápido (incluso usando su smartwatch), y los coordinadores pueden gestionar los eventos de la escuela de manera organizada. *(Nota: La aplicación para TV aún no está realizada, ya que está contemplada para la Unidad de aprendizaje III).*
 
 ---
 
-### 5. Tecnologías utilizadas
+### Funcionalidades Principales
 
-* **Lenguajes de programación**: Kotlin (Android, Wear OS, Android TV) y Python (para la automatización e inserción de datos de prueba).
-* **Base de datos y Almacenamiento**: Google Firebase (Cloud Firestore para la base de datos relacional orientada a documentos y Firebase Storage para almacenar las evidencias del alumno).
-* **Interfaz de usuario**: Jetpack Compose (Compose Material 3, Adaptive Navigation Suite, Jetpack Compose para Wear OS, y Android TV Compose).
-* **Componentes de Android**:
-  * **WorkManager**: Para programar y procesar notificaciones y recordatorios en segundo plano.
-  * **Servicios de Wear OS**: Sincronización en la nube, comunicación mediante `SessionListenerService` y control vibratorio háptico.
-  * **FileProvider**: Para la gestión segura del acceso a la cámara y fotos del dispositivo.
-* **Herramientas de construcción**: Gradle utilizando Gradle Kotlin DSL y Version Catalogs (`libs.versions.toml`).
+Nuestra plataforma se divide en las siguientes grandes áreas, dependiendo del usuario y el dispositivo:
+
+**1. App Móvil (Para Alumnos)**
+* Ver las clases en las que están inscritos.
+* Revisar las tareas pendientes y las que ya entregaron.
+* Subir fotos o archivos para entregar evidencias de sus tareas usando la cámara.
+* Ver las calificaciones y los comentarios que les dejó el profesor.
+* Checar el calendario de eventos de la escuela.
+
+**2. App Móvil (Para Profesores)**
+* Crear tareas nuevas para sus clases y ponerles fecha límite.
+* Ver la lista de alumnos inscritos en cada clase.
+* Revisar las fotos/archivos que mandan los alumnos y evaluarlas.
+* Ver gráficas y estadísticas sencillas de cómo va la clase.
+
+**3. Wear OS (Reloj Inteligente para el Profesor)**
+* Recibir notificaciones (con vibración) al instante en que un alumno entrega una tarea.
+* Ver la foto de la tarea directamente en la pantalla del reloj.
+* Calificar rápidamente la entrega usando botones directamente en el smartwatch.
+
+**4. Módulo para el Coordinador (App Móvil)**
+* Dar de alta, editar o eliminar usuarios (alumnos, profesores y otros coordinadores).
+* Administrar los eventos de la escuela (fechas de exámenes, entrega de calificaciones, etc.).
+
+**5. Android TV (Pendiente)**
+* Esta aplicación aún no está realizada ya que queda pendiente para la **Unidad de aprendizaje III. Aplicaciones para pantallas inteligentes**. Por el momento solo se cuenta con la estructura base del proyecto.
 
 ---
 
-### 6. Instrucciones para ejecutar el proyecto
+### Tecnologías que usamos
 
-#### Requisitos previos
-1. Tener instalado **Android Studio** (versión reciente como Koala o Ladybug).
-2. Tener configurado **JDK 17+**.
-3. Contar con un emulador de Android (Teléfono), un emulador de Wear OS (Reloj) y/o emulador de Android TV, o bien dispositivos físicos configurados en modo depuración.
-4. Python 3 instalado con la biblioteca de Firebase.
+* **Android & Wear OS:** Kotlin.
+* **Diseño e Interfaz:** Jetpack Compose (Material 3, Adaptive Navigation, Wear Compose).
+* **Base de Datos en la nube:** Firebase Cloud Firestore (para guardar usuarios, tareas y clases).
+* **Almacenamiento en la nube:** Firebase Storage (para guardar las fotos y archivos de las tareas).
+* **Componentes extra:** WorkManager y servicios en segundo plano para manejar las notificaciones del reloj.
+* **Automatización:** Un script en Python (`poblar_base_datos.py`) que hicimos para llenar nuestra base de datos con datos de prueba fácilmente.
 
-#### Paso 1: Configurar y poblar la base de datos (Firestore)
-Para inicializar Firestore con datos reales de prueba, ejecuta el script de Python provisto:
-```bash
-pip install firebase-admin
-python poblar_base_datos.py
-```
-*(Este script utiliza el archivo de credenciales de la cuenta de servicio [edutask-cmpm-alp-firebase-adminsdk-fbsvc-c5dd688528.json](file:///c:/Users/agust/StudioProjects/edutask/edutask-cmpm-alp-firebase-adminsdk-fbsvc-c5dd688528.json) ya incluido en el proyecto)*.
+---
 
-#### Paso 2: Importar el proyecto y sincronizar Gradle
-1. Abre Android Studio y selecciona **Open** para importar la carpeta raíz del proyecto `c:\Users\agust\StudioProjects\edutask`.
-2. Espera a que finalice la sincronización automática de Gradle.
-3. Si prefieres compilar desde la terminal, puedes usar el wrapper de Gradle:
-   * **Windows**: `.\gradlew.bat assembleDebug`
-   * **Linux/macOS**: `./gradlew assembleDebug`
+### Cómo ejecutar el proyecto
 
-#### Paso 3: Ejecutar los módulos individuales
-* **Aplicación Móvil**: Selecciona el módulo `app` en la barra superior de configuraciones de ejecución, elige tu emulador/dispositivo móvil y presiona **Run** (Ejecuta la clase principal [MainActivity](file:///c:/Users/agust/StudioProjects/edutask/app/src/main/java/com/pmlp/edutask/MainActivity.kt)).
-* **Aplicación Smartwatch**: Selecciona el módulo `wear`, elige tu emulador/dispositivo Wear OS y presiona **Run** (Inicia la actividad [MainActivityWear](file:///c:/Users/agust/StudioProjects/edutask/wear/src/main/java/com/pmlp/wear/presentation/MainActivityWear.kt#L45)).
-* **Aplicación TV**: Selecciona el módulo `tv`, elige tu emulador/dispositivo de Android TV y presiona **Run** (Inicia la actividad [MainActivitytv](file:///c:/Users/agust/StudioProjects/edutask/tv/src/main/java/com/pmlp/tv/MainActivitytv.kt)).
+Para probar el proyecto en tu computadora, estos son los pasos a seguir:
+
+**Requisitos Previos:**
+* Android Studio instalado.
+* Tener configurados emuladores (un teléfono, un reloj con Wear OS y una Android TV) o tener dispositivos físicos a la mano.
+* (Opcional) Python 3 instalado si quieres correr el script de prueba de la base de datos.
+
+**Paso 1: Preparar la base de datos**
+1. Abre una terminal dentro de la carpeta del proyecto.
+2. Instala la librería de Firebase: `pip install firebase-admin`
+3. Corre el script: `python poblar_base_datos.py` (esto automáticamente insertará alumnos y clases ficticias para poder probar la app).
+
+**Paso 2: Correr la aplicación**
+1. Abre la carpeta del proyecto en Android Studio.
+2. En el menú superior de ejecución, selecciona el módulo que deseas probar:
+   * Elige el módulo **`app`** para correr la app en un celular o tablet.
+   * Elige el módulo **`wear`** para correr la app en el reloj inteligente.
+   * Elige el módulo **`tv`** para correr la pantalla de televisión.
+3. Da clic en el botón de **Run** (el ícono de 'play' verde).
+
+*(Nota: Dentro de la carpeta `APK/` que viene en el proyecto ya están los archivos `.apk` generados y listos para instalarse en un dispositivo físico si se requiere).*
+
+---
+
+### Evidencias y Capturas de Pantalla
+
+A continuación demostramos el funcionamiento de las distintas partes del sistema:
+
+**1. Módulo del Alumno (App Móvil)**
+
+
+**2. Módulo del Profesor (App Móvil)**
+
+
+**3. Módulo del Reloj (Wear OS)**
+
+
+**4. Módulo del Coordinador**
+
+
+**5. Pantalla Institucional (Android TV)**
+
+
+
+**6. Base de Datos (Firebase)**
