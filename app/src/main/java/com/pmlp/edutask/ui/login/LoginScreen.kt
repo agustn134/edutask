@@ -63,6 +63,7 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
             errorMsg = null
 
             try {
+                Log.d("LOGIN_DEBUG", "Intentando login con matricula: $matricula")
                 // Buscar usuario por matricula en Firestore
                 val snapshot = db.collection("usuarios")
                     .whereEqualTo("matricula", matricula.trim())
@@ -94,6 +95,8 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
 
                 val idUsuario = doc.id
                 val nombre    = doc.getString("nombre") ?: matricula
+
+                Log.d("LOGIN_DEBUG", "Login exitoso. Usuario: $nombre, Rol: $rol")
 
                 // Sync session to wear device on successful login
                 if (rol == RolUsuario.Profesor) {
