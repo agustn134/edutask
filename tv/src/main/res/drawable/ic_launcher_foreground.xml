@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Shadow Effect for Depth -->
+    <path
+        android:fillColor="#15000000"
+        android:pathData="M54,32 L88,44 L54,56 L20,44 Z" />
+        
+    <!-- Top Cap Diamond Plate -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L86,40 L54,52 L22,40 Z" />
+        
+    <!-- Bottom Cap Base -->
+    <path
+        android:fillColor="#E0E1F9"
+        android:pathData="M36,46 L36,56 C36,63 72,63 72,56 L72,46 C66,50 60,51 54,51 C48,51 42,50 36,46 Z" />
+        
+    <!-- Tassel String and Button -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,40 A2,2 0 1,1 54,40 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,40 L80,41 L80,56" />
+    <path
+        android:fillColor="#DEE0FF"
+        android:pathData="M78,56 L82,56 L82,62 L78,62 Z" />
+
+    <!-- Stylized Academic task checkmark -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M44,70 L51,77 L66,62" />
+</vector>

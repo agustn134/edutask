@@ -49,17 +49,43 @@ class EventosSharedViewModel : ViewModel() {
                         val titulo = doc.getString("titulo") ?: ""
                         val descripcion = doc.getString("descripcion") ?: ""
 
-                        // Extraer fecha del campo 'fechaEvento' o 'fechaPublicacion' si existe
-                        val timestamp = doc.getTimestamp("fechaEvento")
-                        val fechaMillis = timestamp?.toDate()?.time
-                            ?: doc.getLong("fechaPublicacion")
-                            ?: System.currentTimeMillis()
+                        // Extracción segura del campo 'fechaEvento' soportando múltiples formatos
+                        val fechaMillis: Long = try {
+                            when (val fechaRaw = doc.get("fechaEvento")) {
+                                is Timestamp -> fechaRaw.toDate().time
+                                is String -> {
+                                    // Si la fecha viene como ISO-8601 o String numérico
+                                    try {
+                                        java.time.Instant.parse(fechaRaw).toEpochMilli()
+                                    } catch (_: Exception) {
+                                        fechaRaw.toLongOrNull() ?: System.currentTimeMillis()
+                                    }
+                                }
+                                is Number -> fechaRaw.toLong()
+                                is Map<*, *> -> {
+                                    // Maneja estructuras exportadas como {_seconds: X, _nanoseconds: Y}
+                                    val seconds = (fechaRaw["_seconds"] as? Number)?.toLong() ?: 0L
+                                    seconds * 1000
+                                }
+                                else -> {
+                                    doc.getLong("fechaPublicacion") ?: System.currentTimeMillis()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("FIRESTORE_DEBUG", "Error al procesar la fecha en documento $id: ${e.message}")
+                            doc.getLong("fechaPublicacion") ?: System.currentTimeMillis()
+                        }
+
+                        val lugar = doc.getString("lugar") ?: ""
+                        val imagenUrl = doc.getString("imagenUrl")
 
                         Evento(
                             idEvento = id,
                             titulo = titulo,
                             descripcion = descripcion,
-                            fechaPublicacion = fechaMillis
+                            lugar = lugar,
+                            fechaPublicacion = fechaMillis,
+                            imagenUrl = imagenUrl
                         )
                     }
 
@@ -77,12 +103,14 @@ class EventosSharedViewModel : ViewModel() {
     fun saveEvento(evento: Evento, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val map = mapOf(
+                val map = mutableMapOf<String, Any>(
                     "titulo" to evento.titulo,
                     "descripcion" to evento.descripcion,
+                    "lugar" to evento.lugar,
                     "fechaEvento" to Timestamp(java.util.Date(evento.fechaPublicacion)),
                     "fechaPublicacion" to evento.fechaPublicacion
                 )
+                evento.imagenUrl?.let { map["imagenUrl"] = it }
                 if (evento.idEvento.isEmpty()) {
                     db.collection("eventos_escolares").add(map).await()
                 } else {

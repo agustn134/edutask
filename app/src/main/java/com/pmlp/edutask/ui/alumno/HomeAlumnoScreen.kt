@@ -98,7 +98,7 @@ fun HomeAlumnoScreen(
 
     val now = java.util.Date()
     val pendienteCount = if (uiState is HomeAlumnoState.Success) {
-        (uiState as HomeAlumnoState.Success).tareas.count { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }
+        (uiState as HomeAlumnoState.Success).tareas.count { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && (it.tarea.fechaLimite == null || !now.after(it.tarea.fechaLimite)) }
     } else 0
 
     val initials = nombreAlumno.split(" ").take(2).joinToString("") { it.first().toString().uppercase() }
@@ -183,7 +183,7 @@ fun HomeAlumnoScreen(
                             }
                             1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
                                           tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                            2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, data.promedios, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
                             3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas, correoAlumno) { nuevoCorreo, nuevaContrasena ->
                                 viewModel.updateAccount(idUsuario, nuevoCorreo, nuevaContrasena) { success ->
                                     if (success) {
@@ -264,7 +264,7 @@ fun HomeAlumnoScreen(
                                 }
                                 1 -> TareasContent(Modifier.padding(pad), claseSelected, { claseSelected = if (claseSelected == it) null else it },
                                               tareasFiltradas, pendienteCount, data.clases, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
-                                2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
+                                2 -> CalificacionesContent(Modifier.padding(pad), data.tareas, data.promedios, isRefreshing, { viewModel.refresh(idUsuario) }, onVerTarea)
                                 3 -> PerfilContent(Modifier.padding(pad), nombreAlumno, carrera, data.tareas, correoAlumno) { nuevoCorreo, nuevaContrasena ->
                                     viewModel.updateAccount(idUsuario, nuevoCorreo, nuevaContrasena) { success ->
                                         if (success) {

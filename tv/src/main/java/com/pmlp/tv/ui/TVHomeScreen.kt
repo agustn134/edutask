@@ -14,6 +14,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import coil.compose.AsyncImage
 import androidx.compose.foundation.BorderStroke
 import androidx.tv.material3.Border
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -141,8 +144,8 @@ fun EventoHeroCard(evento: Evento) {
         colors = ClickableSurfaceDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            focusedContentColor = MaterialTheme.colorScheme.onSurface,
+            contentColor = Color.White,
+            focusedContentColor = Color.White,
             pressedContainerColor = MaterialTheme.colorScheme.primaryContainer
         ),
         modifier = Modifier
@@ -150,65 +153,103 @@ fun EventoHeroCard(evento: Evento) {
             .fillMaxHeight(0.9f)
             .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(48.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    text = evento.titulo,
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = evento.descripcion,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 40.sp,
-                    maxLines = 4
-                )
-            }
-            
-            // Fila inferior con el Lugar y la Fecha
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Etiqueta de Lugar (Solo se muestra si el campo 'lugar' no está vacío)
-                if (evento.lugar.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(12.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "📍 Lugar: ${evento.lugar}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            fontWeight = FontWeight.SemiBold
-                        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            val url = evento.imagenUrl
+            if (!url.isNullOrEmpty()) {
+                val imageModel = remember(url) {
+                    try {
+                        val base64Str = if (url.startsWith("data:image")) url.substringAfter("base64,") else url
+                        if (base64Str.length > 500 && !base64Str.startsWith("http")) {
+                            val bytes = android.util.Base64.decode(base64Str, android.util.Base64.DEFAULT)
+                            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        } else {
+                            url
+                        }
+                    } catch (e: Exception) {
+                        url
                     }
-                } else {
-                    Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                // Etiqueta de Fecha
-                Box(
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(12.dp))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Publicado: $dateString",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                AsyncImage(
+                    model = imageModel,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f)),
+                            startY = 200f
+                        )
                     )
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(48.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Spacer(modifier = Modifier.weight(1f))
+                Column {
+                    Text(
+                        text = evento.titulo,
+                        style = MaterialTheme.typography.displayMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = evento.descripcion,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White.copy(alpha = 0.9f),
+                        lineHeight = 40.sp,
+                        maxLines = 4
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (evento.lugar.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .background(Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "📍 Lugar: ${evento.lugar}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Publicado: $dateString",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
         }

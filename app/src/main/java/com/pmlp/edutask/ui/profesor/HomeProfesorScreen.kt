@@ -46,6 +46,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.pmlp.edutask.utils.getSafeDate
 
 private val EVIDENCIAS = listOf(
     EvidenciaTarea("1", "Evidencia Act. 3 PMLP", "", Date(System.currentTimeMillis() - 2 * 3600000),  EstadoEvidencia.Pendiente, "1", "Juan Ramirez"),
@@ -175,8 +176,7 @@ fun HomeProfesorScreen(
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) return@addSnapshotListener
                 listaTareas = snapshot.documents.map { doc ->
-                    val dateTimestamp = doc.getTimestamp("fechaLimite")
-                    val date = dateTimestamp?.toDate() ?: Date()
+                    val date = doc.getSafeDate("fechaLimite") ?: Date()
                     Tarea(
                         idTarea = doc.id,
                         titulo = doc.getString("titulo") ?: "Sin Título",
@@ -253,7 +253,7 @@ fun HomeProfesorScreen(
                                 idEvidencia = idEvidenciaStr,
                                 tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
                                 fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
-                                fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
+                                fechaEnvio = doc.getSafeDate("fechaEnvio") ?: Date(),
                                 estado = estadoEnum,
                                 idAsignacion = idAsignacionStr,
                                 nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo"
@@ -865,7 +865,7 @@ private fun TareasContent(
                             )
                             Spacer(Modifier.weight(1f))
                             val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
-                            Text("Límite: " + fmt.format(tarea.fechaLimite), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            Text("Límite: " + tarea.fechaLimite?.let { fmt.format(it) }.orEmpty(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
