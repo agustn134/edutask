@@ -26,3 +26,4 @@ rootProject.name = "edutask"
 include(":app")
 include(":wear")
 include(":tv")
+include(":core")

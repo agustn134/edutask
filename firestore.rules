@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Función auxiliar para verificar el rol de Director/Coordinador
+    function isDirector() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol in ['Director', 'Coordinador'];
+    }
+
+    // Regla para la colección de usuarios
+    match /usuarios/{userId} {
+      // Permitir la búsqueda/consulta por matrícula para poder validar el login
+      allow read: if true; 
+      allow write: if false; // Nadie modifica roles directamente desde el cliente
+    }
+
+    // Regla para los eventos escolares
+    match /eventos_escolares/{evento} {
+      allow read: if true; // Lectura pública para la TV y la app móvil
+      allow write: if isDirector(); // Solo Directores/Coordinadores pueden guardar o borrar
+    }
+
+    // Regla para sincronización con Wear OS
+    match /sesion_wear/{docId} {
+      allow read, write: if true; // Idealmente restringido, pero abierto para evitar fallos de login por ahora
+    }
+  }
+}

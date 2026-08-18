@@ -10,6 +10,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.pmlp.edutask.model.Evento
 import com.pmlp.edutask.ui.EventosSharedViewModel
 import com.pmlp.edutask.ui.EventosUiState
@@ -26,6 +37,8 @@ fun FormularioEventoScreen(
 
     var titulo by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
+    var lugar by remember { mutableStateOf("") }
+    var imagenUrl by remember { mutableStateOf<String?>(null) }
     
     var hasCustomDate by remember { mutableStateOf(false) }
     var customDate by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -39,8 +52,22 @@ fun FormularioEventoScreen(
             if (evento != null) {
                 titulo = evento.titulo
                 descripcion = evento.descripcion
+                lugar = evento.lugar
+                imagenUrl = evento.imagenUrl
                 customDate = evento.fechaPublicacion
                 hasCustomDate = true
+            }
+        }
+    }
+    
+    val context = LocalContext.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val compressedBase64 = compressImageToBase64(context, it)
+            if (compressedBase64 != null) {
+                imagenUrl = compressedBase64
             }
         }
     }
@@ -84,6 +111,55 @@ fun FormularioEventoScreen(
                 modifier = Modifier.fillMaxWidth().height(150.dp),
                 maxLines = 5
             )
+
+            OutlinedTextField(
+                value = lugar,
+                onValueChange = { lugar = it },
+                label = { Text("Lugar del Evento (Opcional)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // Selector de Imagen
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("Imagen de Fondo (Opcional)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (imagenUrl != null) {
+                    val imageModel = remember(imagenUrl) {
+                        try {
+                            val base64Str = if (imagenUrl!!.startsWith("data:image")) imagenUrl!!.substringAfter("base64,") else imagenUrl!!
+                            if (base64Str.length > 500 && !base64Str.startsWith("http")) {
+                                val bytes = Base64.decode(base64Str, Base64.DEFAULT)
+                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            } else {
+                                imagenUrl
+                            }
+                        } catch (e: Exception) {
+                            imagenUrl
+                        }
+                    }
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = "Vista previa",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .padding(bottom = 8.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                OutlinedButton(
+                    onClick = { imagePickerLauncher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (imagenUrl == null) "Seleccionar Foto" else "Cambiar Foto")
+                }
+                if (imagenUrl != null) {
+                    TextButton(onClick = { imagenUrl = null }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Quitar Foto", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -229,7 +305,9 @@ fun FormularioEventoScreen(
                         idEvento = idEvento ?: "",
                         titulo = titulo,
                         descripcion = descripcion,
-                        fechaPublicacion = finalFecha
+                        lugar = lugar,
+                        fechaPublicacion = finalFecha,
+                        imagenUrl = imagenUrl
                     )
                     viewModel.saveEvento(
                         evento = evento,
@@ -253,5 +331,36 @@ fun FormularioEventoScreen(
                 }
             }
         }
+    }
+}
+
+fun compressImageToBase64(context: Context, uri: Uri): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val originalBitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream.close()
+
+        // Reducir la imagen a máximo 800px de ancho/alto manteniendo la proporción
+        val maxDimension = 800
+        val ratio = Math.min(
+            maxDimension.toFloat() / originalBitmap.width,
+            maxDimension.toFloat() / originalBitmap.height
+        )
+        val width = Math.round(ratio * originalBitmap.width)
+        val height = Math.round(ratio * originalBitmap.height)
+
+        val scaledBitmap = if (ratio < 1f) {
+            Bitmap.createScaledBitmap(originalBitmap, width, height, true)
+        } else {
+            originalBitmap
+        }
+
+        val outputStream = ByteArrayOutputStream()
+        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+        val byteArray = outputStream.toByteArray()
+        "data:image/jpeg;base64," + Base64.encodeToString(byteArray, Base64.DEFAULT)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }

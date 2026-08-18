@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.pmlp.tv"
-        minSdk = 21
+        minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -36,6 +36,10 @@ android {
 }
 
 dependencies {
+    implementation(project(":core"))
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
@@ -52,5 +56,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-firestore")
+    implementation("io.coil-kt:coil-compose:2.5.0")
     // Storage lo agregaremos aquí mismo cuando lleguemos a esa fase
 }

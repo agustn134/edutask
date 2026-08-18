@@ -115,7 +115,7 @@ fun InicioContent(
         }
         
         val now = java.util.Date()
-        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }.take(3)
+        val proximasTareas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && (it.tarea.fechaLimite == null || !now.after(it.tarea.fechaLimite)) }.take(3)
         if (proximasTareas.isEmpty()) {
             item {
                 EmptyStateIllustration(

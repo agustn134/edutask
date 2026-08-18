@@ -41,6 +41,7 @@ object EduTaskRoutes {
     const val EVALUAR_TAREA = "evaluar_tarea/{idEvidencia}/{idUsuario}"
     const val ALUMNOS_CLASE = "alumnos_clase/{idClase}/{nombreClase}"
     const val ESTADISTICAS_TAREA = "estadisticas_tarea/{idTarea}/{tituloTarea}"
+    const val GRADEBOOK = "gradebook/{idClase}"
 
     fun homeAlumno(idUsuario: String, nombre: String, carrera: String) =
         "home_alumno/${enc(idUsuario)}/${enc(nombre)}/${enc(carrera)}"
@@ -65,7 +66,7 @@ object EduTaskRoutes {
         nombreAlumno: String,
         idEvidencia:  String? = null
     ) = "enviar_evidencia/${enc(idAsignacion)}/${enc(tarea.idTarea)}/${enc(tarea.titulo)}" +
-        "/${enc(tarea.descripcion)}/${tarea.fechaLimite.time}" +
+        "/${enc(tarea.descripcion)}/${tarea.fechaLimite?.time ?: 0L}" +
         "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}" +
         if (idEvidencia != null) "?idEvidencia=${enc(idEvidencia)}" else ""
 
@@ -73,6 +74,7 @@ object EduTaskRoutes {
     fun evaluarTarea(idEvidencia: String, idUsuario: String)  = "evaluar_tarea/${enc(idEvidencia)}/${enc(idUsuario)}"
     fun alumnosClase(idClase: String, nombreClase: String)  = "alumnos_clase/${enc(idClase)}/${enc(nombreClase)}"
     fun estadisticasTarea(idTarea: String, tituloTarea: String)  = "estadisticas_tarea/${enc(idTarea)}/${enc(tituloTarea)}"
+    fun gradebook(idClase: String) = "gradebook/${enc(idClase)}"
 
     fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
     fun dec(s: String?): String = if (s != null) java.net.URLDecoder.decode(s, "UTF-8") else ""
@@ -260,6 +262,9 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
                 nombreClase = nombreClase,
                 onBack = {
                     navController.popBackStack()
+                },
+                onVerLibreta = {
+                    navController.navigate(EduTaskRoutes.gradebook(idClase))
                 }
             )
         }
@@ -273,6 +278,16 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
                 onBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(EduTaskRoutes.GRADEBOOK) { back ->
+            val idClase = EduTaskRoutes.dec(back.arguments?.getString("idClase"))
+            val viewModel: com.pmlp.edutask.ui.profesor.GradebookViewModel = viewModel()
+            com.pmlp.edutask.ui.profesor.GradebookScreen(
+                idClase = idClase,
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
             )
         }
     }

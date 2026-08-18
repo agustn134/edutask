@@ -17,5 +17,6 @@ data class EvidenciaTarea(
     val textoEvidencia: String? = null,
     // Nuevos campos
     val archivos: List<Map<String, String>> = emptyList(), // lista de { "nombre": "...", "url": "..." }
-    val vinculos: List<String> = emptyList()
+    val vinculos: List<String> = emptyList(),
+    val calificacion: Int? = null
 )

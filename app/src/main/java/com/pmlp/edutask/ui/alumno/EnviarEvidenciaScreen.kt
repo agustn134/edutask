@@ -73,7 +73,7 @@ fun EnviarEvidenciaScreen(
     val isLoadingEvidencia by viewModel.isLoadingEvidencia.collectAsState()
 
     val now = java.util.Date()
-    val isVencida = evidenciaEnviada == null && now.after(tarea.fechaLimite)
+    val isVencida = evidenciaEnviada == null && (tarea.fechaLimite != null && now.after(tarea.fechaLimite))
     val isReadOnlyMode = evidenciaEnviada != null
 
     var visorData by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -564,7 +564,7 @@ fun EnviarEvidenciaScreen(
                                 tint     = MaterialTheme.colorScheme.error
                             )
                             Text(
-                                "Fecha límite: ${fmt.format(tarea.fechaLimite)}",
+                                "Fecha límite: ${tarea.fechaLimite?.let { fmt.format(it) } ?: "Sin fecha"}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.error
                             )

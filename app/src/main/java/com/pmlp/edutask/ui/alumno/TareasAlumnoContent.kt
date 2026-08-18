@@ -31,8 +31,8 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
                   isRefreshing: Boolean, onRefresh: () -> Unit,
                   onVerTarea: (TareaItem) -> Unit = {}) {
     val now = java.util.Date()
-    val tareasPendientes = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && !now.after(it.tarea.fechaLimite) }
-    val tareasVencidas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && now.after(it.tarea.fechaLimite) }
+    val tareasPendientes = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && (it.tarea.fechaLimite == null || !now.after(it.tarea.fechaLimite)) }
+    val tareasVencidas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null && (it.tarea.fechaLimite != null && now.after(it.tarea.fechaLimite)) }
     val tareasEntregadas = tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia != null }
     val tareasEvaluadas = tareas.filter { it.estado == EstadoEvidencia.Aprobada || it.estado == EstadoEvidencia.Rechazada }
 
@@ -235,7 +235,7 @@ fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         Icon(Icons.Default.Schedule, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(fmt.format(tarea.fechaLimite), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(tarea.fechaLimite?.let { fmt.format(it) } ?: "Sin límite", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 EstadoChip(estado)

@@ -81,14 +81,6 @@ fun FormularioUsuarioScreen(
             )
 
             OutlinedTextField(
-                value = matricula,
-                onValueChange = { matricula = it },
-                label = { Text("Matrícula") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            OutlinedTextField(
                 value = correo,
                 onValueChange = { correo = it },
                 label = { Text("Correo Electrónico") },
@@ -138,7 +130,7 @@ fun FormularioUsuarioScreen(
 
             Button(
                 onClick = {
-                    if (nombre.isBlank() || matricula.isBlank() || correo.isBlank() || contrasena.isBlank()) {
+                    if (nombre.isBlank() || correo.isBlank() || contrasena.isBlank()) {
                         errorMsg = "Todos los campos son obligatorios"
                         return@Button
                     }

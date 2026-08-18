@@ -31,6 +31,7 @@ import com.pmlp.edutask.model.ClaseInfo
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.text.SimpleDateFormat
+import com.pmlp.edutask.utils.getSafeDate
 
 data class ArchivoAdjunto(
     val uri: Uri? = null,
@@ -128,7 +129,7 @@ fun CrearTareaScreen(
                         titulo = doc.getString("titulo") ?: ""
                         descripcion = doc.getString("descripcion") ?: ""
                         
-                        val date = doc.getTimestamp("fechaLimite")?.toDate() ?: Date()
+                        val date = doc.getSafeDate("fechaLimite") ?: Date()
                         limitTimestamp = date.time
                         
                         selectedClaseId = doc.getString("idClase") ?: ""
