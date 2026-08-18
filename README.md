@@ -108,18 +108,40 @@ A continuación demostramos el funcionamiento de las distintas partes del sistem
 
 **2. Módulo del Profesor (App Móvil)**
 
+<img width="720" height="1650" alt="imagen" src="https://github.com/user-attachments/assets/9b8e6bf0-d4ec-4683-904b-0b1137760256" />
+
+<img width="720" height="1650" alt="imagen" src="https://github.com/user-attachments/assets/543e949d-1cc7-416d-b779-003705a10e66" />
+
+<img width="698" height="1600" alt="imagen" src="https://github.com/user-attachments/assets/4f3690fa-1984-4889-bfd6-6101e83486cf" />
+
+<img width="720" height="1650" alt="imagen" src="https://github.com/user-attachments/assets/6d1a4e4e-a1c0-4729-9664-bb4f60ad8398" />
 
 **3. Módulo del Reloj (Wear OS)**
 
+<img width="272" height="256" alt="imagen" src="https://github.com/user-attachments/assets/9cdc26c8-c510-4d5b-a92f-7eb3369f1f93" />
+
+<img width="270" height="251" alt="imagen" src="https://github.com/user-attachments/assets/80eaeb4c-03ce-492d-8dde-98d642634acd" />
+
+<img width="262" height="263" alt="imagen" src="https://github.com/user-attachments/assets/12c391ed-8133-42ec-8546-051d7cf6e8f6" />
+
+<img width="256" height="259" alt="imagen" src="https://github.com/user-attachments/assets/882658f1-e561-480f-9e38-c3330649ea79" />
 
 **4. Módulo del Coordinador**
 
+<img width="720" height="1650" alt="imagen" src="https://github.com/user-attachments/assets/8f2c1097-f242-4eac-ab26-ad22bc7820e4" />
+
+<img width="720" height="1650" alt="imagen" src="https://github.com/user-attachments/assets/3121e975-b86b-4a11-a58c-a59c2105111f" />
+
+<img width="698" height="1600" alt="imagen" src="https://github.com/user-attachments/assets/72c962cc-ebc3-46ae-80ca-3e9b1098229b" />
+
+<img width="720" height="1650" alt="imagen" src="https://github.com/user-attachments/assets/65499877-2e48-4e6a-b88c-9d89478b3128" />
 
 **5. Pantalla Institucional (Android TV)**
 
-
+<img width="837" height="530" alt="imagen" src="https://github.com/user-attachments/assets/a46a3c24-3860-49aa-a1a5-d3917c7c6f23" />
 
 **6. Base de Datos (Firebase)**
+
 <img width="1920" height="1080" alt="{FCFEF5E6-69CB-4292-8C93-3FA6B453C99A}" src="https://github.com/user-attachments/assets/395bf70a-5647-4b7a-ad19-73a30fd1cf06" />
 
 <img width="1920" height="1080" alt="{55631EB2-2F2E-4DF3-9F86-01498EA9A92A}" src="https://github.com/user-attachments/assets/fc061273-b1c6-45d2-89a9-9e67e141a72a" />
