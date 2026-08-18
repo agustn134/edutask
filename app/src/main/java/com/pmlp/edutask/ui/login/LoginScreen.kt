@@ -181,7 +181,7 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
                             color = MaterialTheme.colorScheme.onSurface)
 
                         OutlinedTextField(
-                            value = matricula, onValueChange = { matricula = it; errorMsg = null },
+                            value = matricula, onValueChange = { matricula = it.uppercase(); errorMsg = null },
                             modifier = Modifier.fillMaxWidth(), label = { Text("Matricula") },
                             placeholder = { Text("Ej. A12345") },
                             leadingIcon = { Icon(Icons.Default.Badge, contentDescription = "Matricula") },

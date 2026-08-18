@@ -20,6 +20,7 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import java.util.concurrent.TimeUnit
 import com.pmlp.edutask.worker.TareaReminderWorker
+import com.pmlp.edutask.utils.getSafeDate
 
 data class TareaItem(
     val tarea: Tarea,
@@ -34,7 +35,8 @@ sealed class HomeAlumnoState {
     object Loading : HomeAlumnoState()
     data class Success(
         val clases: List<String>,
-        val tareas: List<TareaItem>
+        val tareas: List<TareaItem>,
+        val promedios: Map<String, Double> = emptyMap()
     ) : HomeAlumnoState()
     data class Error(val message: String) : HomeAlumnoState()
 }
@@ -118,7 +120,7 @@ class HomeAlumnoViewModel : ViewModel() {
 
         tareas.filter { it.estado == EstadoEvidencia.Pendiente && it.idEvidencia == null }
             .forEach { item ->
-                val timeRemaining = item.tarea.fechaLimite.time - now
+                val timeRemaining = (item.tarea.fechaLimite?.time ?: now) - now
                 if (timeRemaining > twoHoursInMillis) {
                     val delay = timeRemaining - twoHoursInMillis
                     
@@ -182,7 +184,7 @@ class HomeAlumnoViewModel : ViewModel() {
                                 val idClase = tareaDoc.getString("idClase") ?: ""
                                 val titulo = tareaDoc.getString("titulo") ?: ""
                                 val desc = tareaDoc.getString("descripcion") ?: ""
-                                val fecha = tareaDoc.getTimestamp("fechaLimite")?.toDate() ?: java.util.Date()
+                                val fecha = tareaDoc.getSafeDate("fechaLimite") ?: java.util.Date()
                                 val nombreClase = clasesCache.getOrPut(idClase) {
                                     db.collection("clases").document(idClase).get().await().getString("nombre") ?: "Sin Clase"
                                 }
@@ -287,9 +289,20 @@ class HomeAlumnoViewModel : ViewModel() {
                             }
                         }
 
+                        val promediosMap = mutableMapOf<String, Double>()
+                        val tareasPorClase = paresTareasMap.values.groupBy { it.tarea.nombreClase }
+                        
+                        for ((nombreClase, items) in tareasPorClase) {
+                            val calificaciones = items.mapNotNull { it.calificacion }
+                            if (calificaciones.isNotEmpty()) {
+                                promediosMap[nombreClase] = calificaciones.average()
+                            }
+                        }
+
                         _uiState.value = HomeAlumnoState.Success(
                             clases = enrolledClassesNames.ifEmpty { clasesSet.toList().sorted() },
-                            tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite }
+                            tareas = paresTareasMap.values.distinctBy { it.tarea.idTarea }.sortedBy { it.tarea.fechaLimite },
+                            promedios = promediosMap
                         )
 
                     } catch (e: Exception) {

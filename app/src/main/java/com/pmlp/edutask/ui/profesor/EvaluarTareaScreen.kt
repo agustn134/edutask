@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.pmlp.edutask.utils.getSafeDate
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.asImageBitmap
 import android.util.Base64
@@ -112,7 +113,7 @@ fun EvaluarTareaScreen(
                             idEvidencia = idEvidenciaStr,
                             tituloTarea = doc.getString("tituloTarea") ?: "Sin Título",
                             fotoBase64 = doc.getString("fotoBase64") ?: doc.getString("fotoUrl") ?: "",
-                            fechaEnvio = doc.getDate("fechaEnvio") ?: Date(),
+                            fechaEnvio = doc.getSafeDate("fechaEnvio") ?: Date(),
                             estado = estadoEnum,
                             idAsignacion = idAsignacionStr,
                             nombreAlumno = doc.getString("nombreAlumno") ?: "Alumno Anónimo",
@@ -521,7 +522,10 @@ fun EvaluarTareaScreen(
                                                         // Update evidence status: Approved if >= 6, Rejected if < 6
                                                         val nuevoEstado = if (scoreInt >= 6) "Aprobada" else "Rechazada"
                                                         db.collection("evidencias_tarea").document(idEvidencia)
-                                                            .update("estado", nuevoEstado)
+                                                            .update(
+                                                                "estado", nuevoEstado,
+                                                                "calificacion", scoreInt
+                                                            )
                                                             .addOnSuccessListener {
                                                                 isLoading = false
                                                                 onEvaluadoExitoso()
@@ -572,13 +576,17 @@ fun EvaluarTareaScreen(
 
                                                     gradeRef.set(califDoc)
                                                         .addOnSuccessListener {
-                                                            isLoading = false
-                                                            isAlreadyGraded = true
-                                                            esBorrador = true
-                                                            isEditMode = true
-                                                            scope.launch {
-                                                                snackbarHostState.showSnackbar("Borrador guardado exitosamente.")
-                                                            }
+                                                            db.collection("evidencias_tarea").document(idEvidencia)
+                                                                .update("calificacion", scoreInt)
+                                                                .addOnSuccessListener {
+                                                                    isLoading = false
+                                                                    isAlreadyGraded = true
+                                                                    esBorrador = true
+                                                                    isEditMode = true
+                                                                    scope.launch {
+                                                                        snackbarHostState.showSnackbar("Borrador guardado exitosamente.")
+                                                                    }
+                                                                }
                                                         }
                                                         .addOnFailureListener { e ->
                                                             isLoading = false

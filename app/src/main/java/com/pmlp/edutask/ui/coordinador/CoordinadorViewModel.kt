@@ -71,8 +71,15 @@ class CoordinadorViewModel : ViewModel() {
                         RolUsuario.Profesor -> "P-"
                         RolUsuario.Coordinador -> "C-"
                     }
-                    finalIdUsuario = "$prefix$initials"
-                    finalMatricula = "$prefix$initials"
+                    val baseId = "$prefix$initials"
+                    var idToTry = baseId
+                    var counter = 1
+                    while (db.collection("usuarios").document(idToTry).get().await().exists()) {
+                        idToTry = "$baseId-$counter"
+                        counter++
+                    }
+                    finalIdUsuario = idToTry
+                    finalMatricula = idToTry
                 }
 
                 val map = mapOf(

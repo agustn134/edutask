@@ -29,6 +29,7 @@ import java.util.Locale
 fun CalificacionesContent(
     modifier: Modifier = Modifier, 
     tareas: List<TareaItem>, 
+    promedios: Map<String, Double>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onVerTarea: (TareaItem) -> Unit = {}
@@ -57,8 +58,9 @@ fun CalificacionesContent(
                 }
             } else {
                 tareasPorClase.forEach { (nombreClase, tareasClase) ->
+                    val promedioClase = promedios[nombreClase]
                     item(key = nombreClase) {
-                        ClaseGradesAccordion(nombreClase, tareasClase, onVerTarea)
+                        ClaseGradesAccordion(nombreClase, tareasClase, promedioClase, onVerTarea)
                     }
                 }
             }
@@ -68,10 +70,16 @@ fun CalificacionesContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, onVerTarea: (TareaItem) -> Unit) {
+fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, promedio: Double?, onVerTarea: (TareaItem) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val calificacionPromedio = tareas.mapNotNull { it.calificacion }.average()
-    val promedioStr = if (calificacionPromedio.isNaN()) "-" else String.format(Locale.getDefault(), "%.1f", calificacionPromedio)
+    
+    val promedioStr = if (promedio == null || promedio.isNaN()) "-" else String.format(Locale.getDefault(), "%.1f", promedio)
+    val colorPromedio = when {
+        promedio == null || promedio.isNaN() -> androidx.compose.ui.graphics.Color.Gray
+        promedio >= 8.0 -> androidx.compose.ui.graphics.Color(0xFF388E3C) // Verde
+        promedio >= 6.0 -> androidx.compose.ui.graphics.Color(0xFFFBC02D) // Amarillo
+        else -> androidx.compose.ui.graphics.Color.Red
+    }
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth().animateContentSize(),
@@ -110,7 +118,7 @@ fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, onVerTare
                     Text(
                         text = "$promedioStr / 10", 
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = colorPromedio,
                         fontWeight = FontWeight.Bold
                     )
                     Text("Promedio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Grade
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,7 +36,8 @@ data class AlumnoInfo(
 fun AlumnosClaseScreen(
     idClase: String,
     nombreClase: String,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onVerLibreta: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val db = remember { FirebaseFirestore.getInstance() }
@@ -96,6 +98,11 @@ fun AlumnosClaseScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onVerLibreta) {
+                        Icon(Icons.Default.Grade, contentDescription = "Ver Libreta de Calificaciones")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

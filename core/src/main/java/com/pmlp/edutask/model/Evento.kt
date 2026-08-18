@@ -5,5 +5,6 @@ data class Evento(
     val titulo: String = "",
     val descripcion: String = "",
     val lugar: String = "",
-    val fechaPublicacion: Long = System.currentTimeMillis()
+    val fechaPublicacion: Long = System.currentTimeMillis(),
+    val imagenUrl: String? = null
 )
