@@ -1,3 +1,7 @@
+/**
+ * Pestana de perfil del alumno que muestra su informacion personal, matricula, correo
+ * y opciones de configuracion de cuenta / cierre de sesion.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import androidx.compose.foundation.layout.*

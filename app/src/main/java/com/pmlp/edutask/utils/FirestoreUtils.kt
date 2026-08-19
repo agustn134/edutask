@@ -1,3 +1,7 @@
+/**
+ * Funciones de utilidad y extensiones para operaciones con Firebase Firestore
+ * (conversion de datos, queries seguras y manejo de colecciones).
+ */
 package com.pmlp.edutask.utils
 
 import com.google.firebase.Timestamp

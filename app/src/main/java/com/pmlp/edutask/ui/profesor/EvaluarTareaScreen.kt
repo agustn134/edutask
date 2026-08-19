@@ -1,3 +1,7 @@
+/**
+ * Pantalla donde el profesor revisa las evidencias enviadas por los alumnos,
+ * asigna calificaciones numericas y anade retroalimentacion personalizada.
+ */
 package com.pmlp.edutask.ui.profesor
 
 import androidx.compose.foundation.BorderStroke

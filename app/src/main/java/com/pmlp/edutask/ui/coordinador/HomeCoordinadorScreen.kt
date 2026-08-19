@@ -1,3 +1,7 @@
+/**
+ * Pantalla principal del rol Coordinador con acceso a la gestion de eventos institucionales,
+ * administracion de usuarios y metricas del sistema.
+ */
 package com.pmlp.edutask.ui.coordinador
 
 import androidx.compose.foundation.clickable

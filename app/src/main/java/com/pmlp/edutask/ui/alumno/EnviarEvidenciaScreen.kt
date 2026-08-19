@@ -1,3 +1,7 @@
+/**
+ * Pantalla para que el alumno suba y envie la evidencia de una tarea asignada,
+ * permitiendo adjuntar documentos/imagenes, redactar notas y confirmar la entrega.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import android.content.Context

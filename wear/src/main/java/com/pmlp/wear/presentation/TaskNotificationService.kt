@@ -1,3 +1,6 @@
+/**
+ * Servicio de notificaciones en Wear OS que alerta al profesor sobre nuevas evidencias recibidas.
+ */
 package com.pmlp.wear.presentation
 
 import android.app.NotificationChannel

@@ -1,3 +1,6 @@
+/**
+ * ViewModel para Wear OS que procesa la calificacion de evidencias y actualiza Firestore.
+ */
 package com.pmlp.wear.presentation
 
 import android.app.Application

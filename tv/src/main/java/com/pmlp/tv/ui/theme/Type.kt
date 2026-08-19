@@ -1,3 +1,6 @@
+/**
+ * Configuracion de tipografia y escalas de texto para pantallas de Android TV.
+ */
 package com.pmlp.tv.ui.theme
 
 import androidx.compose.ui.text.TextStyle

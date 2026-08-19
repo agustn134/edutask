@@ -1,3 +1,7 @@
+/**
+ * Pantalla de metricas y estadisticas de una tarea en particular (promedio de calificaciones,
+ * tasa de entrega, alumnos evaluados y pendientes).
+ */
 package com.pmlp.edutask.ui.profesor
 
 import androidx.compose.foundation.BorderStroke

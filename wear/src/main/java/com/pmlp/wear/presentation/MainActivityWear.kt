@@ -1,8 +1,6 @@
-/* EduTask — Wear OS
- * Módulo de calificación rápida para el profesor.
- * Pantallas: lista de evidencias pendientes → calificación con un toque.
+/**
+ * Actividad principal para Wear OS que configura la navegacion y flujo en smartwatches.
  */
-
 package com.pmlp.wear.presentation
 
 import android.content.Context
@@ -521,4 +519,4 @@ private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     } catch (e: Exception) {
         null
     }
-}
+}

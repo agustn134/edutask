@@ -1,3 +1,7 @@
+/**
+ * Componente de carga visual (Skeleton / Shimmer) que muestra marcadores de posicion animados
+ * mientras se cargan datos asincronos desde la red o base de datos.
+ */
 package com.pmlp.edutask.ui.components
 
 import androidx.compose.animation.core.*

@@ -1,3 +1,7 @@
+/**
+ * ViewModel que administra el estado global del alumno (clases inscritas, tareas pendientes,
+ * resumen academico y datos de sesion).
+ */
 package com.pmlp.edutask.ui.alumno
 
 import androidx.lifecycle.ViewModel

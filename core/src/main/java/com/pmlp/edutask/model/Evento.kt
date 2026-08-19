@@ -1,3 +1,7 @@
+/**
+ * Modelo de datos compartido representativo de los eventos y avisos institucionales
+ * publicados para la comunidad escolar.
+ */
 package com.pmlp.edutask.model
 
 data class Evento(

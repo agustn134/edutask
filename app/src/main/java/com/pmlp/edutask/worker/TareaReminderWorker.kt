@@ -1,3 +1,7 @@
+/**
+ * Worker en segundo plano (WorkManager) para enviar recordatorios y notificaciones
+ * sobre tareas proximas a vencer a los estudiantes.
+ */
 package com.pmlp.edutask.worker
 
 import android.app.NotificationManager

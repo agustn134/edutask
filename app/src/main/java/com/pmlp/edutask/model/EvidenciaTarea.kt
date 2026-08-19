@@ -1,3 +1,7 @@
+/**
+ * Modelo de datos para las evidencias entregadas por los alumnos,
+ * almacenando enlaces de archivos, comentarios, fechas de entrega y estado de revision.
+ */
 package com.pmlp.edutask.model
 
 import java.util.Date

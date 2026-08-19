@@ -1,3 +1,8 @@
+/**
+ * Pantalla principal del rol Alumno.
+ * Integra la barra de navegacion inferior (Bottom Navigation) y coordina las vistas de
+ * Inicio, Tareas, Calificaciones y Perfil.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import android.app.Activity

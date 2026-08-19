@@ -1,3 +1,7 @@
+/**
+ * Pestana de tareas del alumno que organiza y filtra las tareas por estado
+ * (pendientes, entregadas y calificadas) con acceso directo al detalle de cada una.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import androidx.compose.animation.animateColorAsState

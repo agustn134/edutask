@@ -1,3 +1,7 @@
+/**
+ * Pantalla de autenticacion de EduTask que permite el ingreso mediante correo y contrasena,
+ * validando credenciales y redirigiendo segun el rol del usuario.
+ */
 package com.pmlp.edutask.ui.login
 
 import android.app.Activity

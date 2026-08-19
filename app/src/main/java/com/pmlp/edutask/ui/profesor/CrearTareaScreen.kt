@@ -1,3 +1,7 @@
+/**
+ * Pantalla para que el profesor cree o modifique asignaciones academicas,
+ * definiendo instrucciones, fechas limite, ponderaciones y archivos adjuntos.
+ */
 package com.pmlp.edutask.ui.profesor
 
 import android.net.Uri

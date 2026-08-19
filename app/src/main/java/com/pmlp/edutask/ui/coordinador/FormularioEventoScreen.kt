@@ -1,3 +1,7 @@
+/**
+ * Pantalla con formulario para que el coordinador publique o actualice eventos y avisos
+ * institucionales con titulo, fecha, descripcion, lugar e imagen.
+ */
 package com.pmlp.edutask.ui.coordinador
 
 import androidx.compose.foundation.layout.*

@@ -1,3 +1,7 @@
+/**
+ * Pantalla para Wear OS que permite al profesor calificar evidencias de tareas de forma rapida
+ * directamente desde el reloj inteligente.
+ */
 package com.pmlp.wear.presentation
 
 import androidx.compose.foundation.layout.*

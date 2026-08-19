@@ -1,3 +1,7 @@
+/**
+ * Actividad principal para Android TV que configura la visualizacion en pantalla grande
+ * e inicializa la interfaz del tablon inteligente (TVHomeScreen).
+ */
 package com.pmlp.tv
 
 import android.os.Bundle

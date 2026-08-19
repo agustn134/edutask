@@ -1,3 +1,7 @@
+/**
+ * ViewModel del modulo de Coordinador que gestiona la creacion, edicion y eliminacion
+ * de eventos institucionales y el catalogo general de usuarios.
+ */
 package com.pmlp.edutask.ui.coordinador
 
 import androidx.lifecycle.ViewModel

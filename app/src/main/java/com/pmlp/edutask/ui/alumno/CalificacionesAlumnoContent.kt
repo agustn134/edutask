@@ -1,3 +1,7 @@
+/**
+ * Componente de interfaz para la consulta de calificaciones del alumno.
+ * Muestra el listado de materias, promedios acumulados y desglose de notas por tarea.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import androidx.compose.foundation.layout.*

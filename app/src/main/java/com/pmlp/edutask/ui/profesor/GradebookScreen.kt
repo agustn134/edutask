@@ -1,3 +1,7 @@
+/**
+ * Pantalla de libro de calificaciones (Gradebook) del profesor,
+ * presentando una matriz completa de alumnos versus tareas con calculo automatico de promedios.
+ */
 package com.pmlp.edutask.ui.profesor
 
 import androidx.compose.foundation.background

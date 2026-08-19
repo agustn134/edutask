@@ -1,3 +1,7 @@
+/**
+ * Pantalla que muestra el listado de alumnos inscritos en una clase especifica,
+ * permitiendo al profesor gestionar inscripciones y revisar el progreso individual.
+ */
 package com.pmlp.edutask.ui.profesor
 
 import androidx.compose.foundation.BorderStroke

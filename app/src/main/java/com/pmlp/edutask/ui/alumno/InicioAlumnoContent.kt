@@ -1,3 +1,7 @@
+/**
+ * Pestana de inicio del alumno que presenta un resumen de bienvenida, proximas entregas,
+ * avisos importantes y accesos rapidos a sus clases.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import androidx.compose.foundation.clickable

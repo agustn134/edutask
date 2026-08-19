@@ -1,3 +1,6 @@
+/**
+ * Pantalla para Wear OS que lista las tareas y evidencias pendientes de calificar.
+ */
 package com.pmlp.wear.presentation
 
 import androidx.compose.foundation.layout.*

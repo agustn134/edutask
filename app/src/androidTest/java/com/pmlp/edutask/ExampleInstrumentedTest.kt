@@ -1,3 +1,6 @@
+/**
+ * Prueba instrumental de ejemplo para verificar la correcta ejecucion en entorno Android.
+ */
 package com.pmlp.edutask
 
 import androidx.test.platform.app.InstrumentationRegistry

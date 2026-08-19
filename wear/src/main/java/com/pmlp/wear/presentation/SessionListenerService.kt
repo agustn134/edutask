@@ -1,3 +1,6 @@
+/**
+ * Servicio en segundo plano para Wear OS que escucha y sincroniza la sesion del profesor con la app movil.
+ */
 package com.pmlp.wear.presentation
 
 import android.content.Context

@@ -1,3 +1,8 @@
+/**
+ * Grafo de navegacion principal de la aplicacion movil con Jetpack Compose Navigation.
+ * Define las rutas, argumentos y transiciones entre pantallas para los diferentes roles
+ * (Alumno, Profesor, Coordinador y Login).
+ */
 package com.pmlp.edutask.navigation
 
 import androidx.compose.runtime.Composable

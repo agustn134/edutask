@@ -1,3 +1,6 @@
+/**
+ * Definicion de la paleta de colores del tema Material 3 para la aplicacion movil EduTask.
+ */
 package com.pmlp.edutask.ui.theme
 
 import androidx.compose.ui.graphics.Color

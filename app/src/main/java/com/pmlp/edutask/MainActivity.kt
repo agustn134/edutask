@@ -1,3 +1,8 @@
+/**
+ * Actividad principal de la aplicacion movil EduTask.
+ * Configura el tema general de la app, inicializa el grafo de navegacion (EduTaskNavGraph)
+ * y gestiona el flujo de autenticacion y arranque inicial.
+ */
 package com.pmlp.edutask
 
 import android.os.Bundle

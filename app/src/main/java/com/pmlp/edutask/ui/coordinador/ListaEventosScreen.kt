@@ -1,3 +1,7 @@
+/**
+ * Pantalla que despliega el listado completo de eventos y noticias escolares registradas,
+ * con opciones para crear, editar o eliminar publicaciones.
+ */
 package com.pmlp.edutask.ui.coordinador
 
 import androidx.compose.foundation.layout.*

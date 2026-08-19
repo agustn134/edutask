@@ -1,3 +1,6 @@
+/**
+ * Paleta de colores optimizada para interfaces de Android TV.
+ */
 package com.pmlp.tv.ui.theme
 
 import androidx.compose.ui.graphics.Color

@@ -1,3 +1,7 @@
+/**
+ * ViewModel encargado de gestionar la logica de subida y registro de evidencias en Firestore,
+ * controlando los estados de carga, progreso y manejo de errores.
+ */
 package com.pmlp.edutask.ui.alumno
 
 import android.graphics.Bitmap

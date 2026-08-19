@@ -1,3 +1,7 @@
+/**
+ * Pantalla con el directorio de usuarios del sistema, permitiendo busquedas, filtros por rol
+ * y gestion de cuentas de usuario.
+ */
 package com.pmlp.edutask.ui.coordinador
 
 import androidx.compose.foundation.layout.*

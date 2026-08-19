@@ -1,3 +1,7 @@
+/**
+ * Dialogo modal reutilizable para previsualizar archivos, documentos e imagenes adjuntas
+ * directamente dentro de la aplicacion.
+ */
 package com.pmlp.edutask.ui.components
 
 import android.graphics.Bitmap

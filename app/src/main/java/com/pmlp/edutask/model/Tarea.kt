@@ -1,3 +1,7 @@
+/**
+ * Modelo de datos representativo de una tarea escolar,
+ * con titulo, descripcion, fecha de entrega, clase asociada y ponderacion.
+ */
 package com.pmlp.edutask.model
 
 import com.google.firebase.firestore.ServerTimestamp

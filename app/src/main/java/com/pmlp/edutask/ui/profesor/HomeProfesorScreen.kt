@@ -1,3 +1,7 @@
+/**
+ * Pantalla principal del rol Profesor que administra las clases activas, tareas asignadas,
+ * revisiones pendientes y sincronizacion con dispositivos Wear OS.
+ */
 package com.pmlp.edutask.ui.profesor
 
 import android.app.Activity

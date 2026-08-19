@@ -1,3 +1,6 @@
+/**
+ * Prueba unitaria local de ejemplo para validar logica independiente del framework de Android.
+ */
 package com.pmlp.edutask
 
 import org.junit.Test

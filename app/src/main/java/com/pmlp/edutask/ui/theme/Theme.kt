@@ -1,3 +1,7 @@
+/**
+ * Configuracion del tema visual de Compose para la app movil, soportando modo claro/oscuro
+ * y esquemas de color personalizados.
+ */
 package com.pmlp.edutask.ui.theme
 
 import android.os.Build

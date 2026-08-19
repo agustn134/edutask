@@ -1,3 +1,7 @@
+/**
+ * ViewModel que calcula de forma reactiva las calificaciones y promedios generales
+ * por alumno, grupo y tarea para la vista de Gradebook.
+ */
 package com.pmlp.edutask.ui.profesor
 
 import android.util.Log

@@ -1,3 +1,7 @@
+/**
+ * Modelo de datos compartido que representa la calificacion y retroalimentacion
+ * asignada a una entrega de tarea.
+ */
 package com.pmlp.edutask.model
 
 import java.util.Date

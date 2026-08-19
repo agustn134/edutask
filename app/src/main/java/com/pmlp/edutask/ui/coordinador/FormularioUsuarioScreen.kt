@@ -1,3 +1,7 @@
+/**
+ * Pantalla con formulario para registrar o actualizar datos de usuarios (alumnos, profesores,
+ * coordinadores), asignando roles y credenciales.
+ */
 package com.pmlp.edutask.ui.coordinador
 
 import androidx.compose.foundation.layout.*

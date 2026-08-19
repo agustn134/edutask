@@ -1,3 +1,7 @@
+/**
+ * ViewModel compartido entre modulos que sincroniza en tiempo real los eventos escolares
+ * y recalcula los promedios y metricas de grupos para el modulo de TV.
+ */
 package com.pmlp.edutask.ui
 
 import android.util.Log
@@ -5,8 +9,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.pmlp.edutask.model.Evento
+import com.pmlp.edutask.model.EstadisticaGrupo
+import com.pmlp.edutask.model.PromedioMateria
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,14 +26,27 @@ sealed class EventosUiState {
     data class Error(val message: String) : EventosUiState()
 }
 
+sealed class EstadisticasUiState {
+    object Loading : EstadisticasUiState()
+    data class Success(val grupos: List<EstadisticaGrupo>) : EstadisticasUiState()
+    data class Error(val message: String) : EstadisticasUiState()
+}
+
 class EventosSharedViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
     private val _uiState = MutableStateFlow<EventosUiState>(EventosUiState.Idle)
     val uiState: StateFlow<EventosUiState> = _uiState
 
+    private val _estadisticasState = MutableStateFlow<EstadisticasUiState>(EstadisticasUiState.Loading)
+    val estadisticasState: StateFlow<EstadisticasUiState> = _estadisticasState
+
+    /** Listener de evidencias en tiempo real para el dashboard TV */
+    private var evidenciasListener: ListenerRegistration? = null
+
     init {
         fetchEventos()
+        fetchEstadisticasInstitucionales()
     }
 
     fun fetchEventos() {
@@ -98,6 +118,171 @@ class EventosSharedViewModel : ViewModel() {
                     _uiState.value = EventosUiState.Success(list)
                 }
             }
+    }
+
+    /**
+     * Escucha en tiempo real la colección evidencias_tarea y recalcula las estadísticas
+     * por grupo cada vez que el profesor guarda o actualiza una calificación.
+     */
+    private fun fetchEstadisticasInstitucionales() {
+        evidenciasListener?.remove()
+
+        // Listener en tiempo real sobre evidencias_tarea.
+        // Cuando un profesor califica, este listener se activa automáticamente.
+        evidenciasListener = db.collection("evidencias_tarea")
+            .addSnapshotListener { evidenciasSnap, error ->
+                if (error != null) {
+                    Log.e("ESTADISTICAS_TV", "Error escuchando evidencias: ${error.message}")
+                    _estadisticasState.value = EstadisticasUiState.Error(error.message ?: "Error")
+                    return@addSnapshotListener
+                }
+                if (evidenciasSnap == null) return@addSnapshotListener
+
+                // Cada vez que hay un cambio en evidencias, recalculamos las estadísticas
+                viewModelScope.launch {
+                    try {
+                        calcularEstadisticas()
+                    } catch (e: Exception) {
+                        Log.e("ESTADISTICAS_TV", "Error calculando estadísticas: ${e.message}")
+                        _estadisticasState.value = EstadisticasUiState.Error(e.message ?: "Error")
+                    }
+                }
+            }
+    }
+
+    private suspend fun calcularEstadisticas() {
+        // 1. Obtener todas las clases
+        val clasesSnap = db.collection("clases").get().await()
+        val clases = clasesSnap.documents.map { doc ->
+            Pair(doc.id, doc.getString("nombre") ?: doc.getString("nombreClase") ?: "Grupo sin nombre")
+        }
+
+        if (clases.isEmpty()) {
+            _estadisticasState.value = EstadisticasUiState.Success(emptyList())
+            return
+        }
+
+        val grupos = mutableListOf<EstadisticaGrupo>()
+
+        for ((idClase, nombreClase) in clases) {
+            try {
+                // 2. Total de alumnos en el grupo
+                val alumnosSnap = db.collection("clase_alumno")
+                    .whereEqualTo("idClase", idClase)
+                    .get().await()
+                val totalAlumnos = alumnosSnap.size()
+                val alumnoIds = alumnosSnap.documents.mapNotNull { it.getString("idUsuario") }
+
+                // 3. Tareas del grupo
+                val tareasSnap = db.collection("tareas")
+                    .whereEqualTo("idClase", idClase)
+                    .get().await()
+                val tareas = tareasSnap.documents.map { it.id to (it.getString("titulo") ?: "Sin título") }
+
+                if (tareas.isEmpty()) {
+                    grupos.add(
+                        EstadisticaGrupo(
+                            idClase = idClase,
+                            nombreClase = nombreClase,
+                            promedioGeneral = null,
+                            promediosPorTarea = emptyList(),
+                            totalAlumnos = totalAlumnos,
+                            alumnosCalificados = 0
+                        )
+                    )
+                    continue
+                }
+
+                val tareaIds = tareas.map { it.first }
+
+                // 4. Asignaciones de esas tareas
+                // Map idAsignacion → (idAlumno, idTarea)
+                val asigMap = mutableMapOf<String, Pair<String, String>>()
+                val chunks = tareaIds.chunked(10)
+                for (chunk in chunks) {
+                    val asigSnap = db.collection("asignaciones_tarea")
+                        .whereIn("idTarea", chunk)
+                        .get().await()
+                    for (doc in asigSnap.documents) {
+                        val idAlumno = doc.getString("idUsuario") ?: continue
+                        val idTarea = doc.getString("idTarea") ?: continue
+                        asigMap[doc.id] = Pair(idAlumno, idTarea)
+                    }
+                }
+
+                // 5. Evidencias con calificaciones
+                // Map (idAlumno, idTarea) → calificacion
+                val calificaciones = mutableMapOf<Pair<String, String>, Int>()
+                val asigIds = asigMap.keys.toList()
+                val asigChunks = asigIds.chunked(10)
+                for (chunk in asigChunks) {
+                    val evSnap = db.collection("evidencias_tarea")
+                        .whereIn("idAsignacion", chunk)
+                        .get().await()
+                    for (ev in evSnap.documents) {
+                        val califRaw = ev.get("calificacion")
+                        val calif = when (califRaw) {
+                            is Number -> califRaw.toInt()
+                            is String -> califRaw.toIntOrNull()
+                            else -> null
+                        } ?: continue
+                        val idAsig = ev.getString("idAsignacion") ?: continue
+                        val pair = asigMap[idAsig] ?: continue
+                        calificaciones[pair] = calif
+                    }
+                }
+
+                // 6. Calcular promedio por tarea (promedio del grupo en esa materia)
+                val promediosPorTarea = tareas.map { (idTarea, nombreTarea) ->
+                    val califsEnTarea = alumnoIds.mapNotNull { idAlumno ->
+                        calificaciones[Pair(idAlumno, idTarea)]
+                    }
+                    val promedio = if (califsEnTarea.isNotEmpty())
+                        califsEnTarea.sum().toDouble() / califsEnTarea.size.toDouble()
+                    else null
+                    PromedioMateria(
+                        idTarea = idTarea,
+                        nombreTarea = nombreTarea,
+                        promedio = promedio,
+                        totalCalificados = califsEnTarea.size
+                    )
+                }
+
+                // 7. Promedio general del grupo
+                val todasLasCalifs = calificaciones.filter { (key, _) ->
+                    alumnoIds.contains(key.first)
+                }.values.toList()
+
+                val promedioGeneral = if (todasLasCalifs.isNotEmpty())
+                    todasLasCalifs.sum().toDouble() / todasLasCalifs.size.toDouble()
+                else null
+
+                val alumnosConCalif = alumnoIds.count { idAlumno ->
+                    tareaIds.any { idTarea -> calificaciones.containsKey(Pair(idAlumno, idTarea)) }
+                }
+
+                grupos.add(
+                    EstadisticaGrupo(
+                        idClase = idClase,
+                        nombreClase = nombreClase,
+                        promedioGeneral = promedioGeneral,
+                        promediosPorTarea = promediosPorTarea,
+                        totalAlumnos = totalAlumnos,
+                        alumnosCalificados = alumnosConCalif
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e("ESTADISTICAS_TV", "Error procesando grupo $idClase: ${e.message}")
+            }
+        }
+
+        _estadisticasState.value = EstadisticasUiState.Success(grupos.sortedBy { it.nombreClase })
+        Log.d("ESTADISTICAS_TV", "Estadísticas actualizadas: ${grupos.size} grupos procesados")
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        evidenciasListener?.remove()
     }
 
     fun saveEvento(evento: Evento, onSuccess: () -> Unit, onError: (String) -> Unit) {

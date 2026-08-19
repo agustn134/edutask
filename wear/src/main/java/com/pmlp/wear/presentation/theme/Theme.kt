@@ -1,3 +1,6 @@
+/**
+ * Configuracion del tema visual de Compose para Wear OS optimizado para pantallas circulares/rectangulares.
+ */
 package com.pmlp.wear.presentation.theme
 
 import androidx.compose.runtime.Composable

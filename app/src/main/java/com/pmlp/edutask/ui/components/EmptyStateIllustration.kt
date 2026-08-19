@@ -1,3 +1,7 @@
+/**
+ * Componente reutilizable de interfaz que renderiza ilustraciones y mensajes informativos
+ * cuando una lista o seccion no cuenta con datos para mostrar.
+ */
 package com.pmlp.edutask.ui.components
 
 import androidx.compose.foundation.background

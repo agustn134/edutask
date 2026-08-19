@@ -1,3 +1,6 @@
+/**
+ * Configuracion de estilos tipograficos (Typography) para la aplicacion movil EduTask.
+ */
 package com.pmlp.edutask.ui.theme
 
 import androidx.compose.material3.Typography
