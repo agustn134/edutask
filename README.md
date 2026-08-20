@@ -20,10 +20,10 @@ El objetivo de **EduTask** es crear una plataforma educativa completa que funcio
 
 ### 📖 Documentación Técnica
 Para revisar la documentación del código, arquitectura y detalles técnicos de cada módulo, consulta los siguientes enlaces rápidos:
-* 📱 **[Módulo Móvil (App)](./app/README.md)** - Aplicación principal para Alumnos, Profesores y Coordinadores.
-* ⌚ **[Módulo Wear OS (Reloj)](./wear/README.md)** - Aplicación complementaria para smartwatch de los Profesores.
-* 📺 **[Módulo TV (Pantalla)](./tv/README.md)** - Interfaz institucional (dashboard) para Android TV.
-* ⚙️ **[Módulo Core](./core/README.md)** - Base de datos, modelos y lógica compartida entre todos los módulos.
+* **[Módulo Móvil (App)](./app/README.md)** - Aplicación principal para Alumnos, Profesores y Coordinadores.
+* **[Módulo Wear OS (Reloj)](./wear/README.md)** - Aplicación complementaria para smartwatch de los Profesores.
+*  **[Módulo TV (Pantalla)](./tv/README.md)** - Interfaz institucional (dashboard) para Android TV.
+*  **[Módulo Core](./core/README.md)** - Base de datos, modelos y lógica compartida entre todos los módulos.
 
 ---
 
