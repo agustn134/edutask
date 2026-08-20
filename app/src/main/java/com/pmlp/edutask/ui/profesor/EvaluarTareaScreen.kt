@@ -1,6 +1,9 @@
 /**
  * Pantalla donde el profesor revisa las evidencias enviadas por los alumnos,
  * asigna calificaciones numericas y anade retroalimentacion personalizada.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -48,6 +51,12 @@ import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla EvaluarTareaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EvaluarTareaScreen(
     idEvidencia: String,
     idUsuario: String, // Profesor ID
@@ -643,6 +652,11 @@ fun EvaluarTareaScreen(
     }
 }
 
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeBase64ToBitmap(base64Str: String): android.graphics.Bitmap? {
     return try {
         val cleanString = if (base64Str.contains(",")) {
@@ -657,6 +671,11 @@ private fun decodeBase64ToBitmap(base64Str: String): android.graphics.Bitmap? {
     }
 }
 
+/**
+ * Abre el recurso o vista abrirArchivoBase64 para la interaccion del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
     try {
         val cleanString = if (base64Str.contains(",")) {

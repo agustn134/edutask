@@ -1,5 +1,8 @@
 /**
  * Configuracion de tipografia y escalas de texto para pantallas de Android TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui.theme
 

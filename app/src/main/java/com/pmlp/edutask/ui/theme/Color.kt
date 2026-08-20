@@ -1,5 +1,8 @@
 /**
  * Definicion de la paleta de colores del tema Material 3 para la aplicacion movil EduTask.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.theme
 

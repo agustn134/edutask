@@ -1,6 +1,9 @@
 /**
  * Pestana de perfil del alumno que muestra su informacion personal, matricula, correo
  * y opciones de configuracion de cuenta / cierre de sesion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -34,6 +37,11 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de PerfilContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun PerfilContent(
     modifier: Modifier = Modifier, 
     nombre: String, 
@@ -158,6 +166,11 @@ fun PerfilContent(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar StatCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
     ElevatedCard(
         modifier = modifier,
@@ -186,6 +199,11 @@ fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.co
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ClaseStatAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ClaseStatAccordion(nombreClase: String, tareas: List<TareaItem>) {
     var expanded by remember { mutableStateOf(false) }
     val tareasEntregadas = tareas.filter { it.estado != EstadoEvidencia.Pendiente }.size
@@ -269,6 +287,11 @@ fun ClaseStatAccordion(nombreClase: String, tareas: List<TareaItem>) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar AjustesCuentaAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AjustesCuentaAccordion(
     correoActual: String = "",
     onGuardarCambios: (String, String) -> Unit
@@ -377,6 +400,11 @@ fun AjustesCuentaAccordion(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ShortcutItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ShortcutItem(icon: ImageVector, title: String, subtitle: String) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -407,6 +435,11 @@ fun ShortcutItem(icon: ImageVector, title: String, subtitle: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar VideoConferenciasAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun VideoConferenciasAccordion(clases: List<String>) {
     var expanded by remember { mutableStateOf(false) }
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current

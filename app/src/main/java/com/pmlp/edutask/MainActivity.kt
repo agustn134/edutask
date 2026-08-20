@@ -2,6 +2,9 @@
  * Actividad principal de la aplicacion movil EduTask.
  * Configura el tema general de la app, inicializa el grafo de navegacion (EduTaskNavGraph)
  * y gestiona el flujo de autenticacion y arranque inicial.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask
 
@@ -19,6 +22,11 @@ import android.content.Context
 import android.os.Build
 
 class MainActivity : ComponentActivity() {
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         createNotificationChannel()
 
@@ -44,6 +52,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: createNotificationChannel.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Recordatorios EduTask"

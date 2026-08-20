@@ -1,6 +1,9 @@
 /**
  * Modelo de datos compartido que representa la calificacion y retroalimentacion
  * asignada a una entrega de tarea.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 

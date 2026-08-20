@@ -1,6 +1,9 @@
 /**
  * Pantalla de autenticacion de EduTask que permite el ingreso mediante correo y contrasena,
  * validando credenciales y redirigiendo segun el rol del usuario.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.login
 
@@ -44,6 +47,12 @@ import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla LoginScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _ -> }) {
     val context   = LocalContext.current
     val winSize   = calculateWindowSizeClass(activity = context as Activity)
@@ -59,6 +68,12 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
     val scope           = rememberCoroutineScope()
     val db              = remember { FirebaseFirestore.getInstance() }
 
+    /**
+     * Metodo principal que ejecuta la operacion: doLogin.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun doLogin() {
         if (matricula.isBlank() || password.isBlank()) return
 
@@ -269,12 +284,24 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
 
 @Preview(name = "Login Movil", showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: LoginPreviewMovil.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun LoginPreviewMovil() {
     EduTaskTheme(darkTheme = false, dynamicColor = false) { LoginScreen() }
 }
 
 @Preview(name = "Login Tablet", showBackground = true, widthDp = 800, heightDp = 1280)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: LoginPreviewTablet.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun LoginPreviewTablet() {
     EduTaskTheme(darkTheme = false, dynamicColor = false) { LoginScreen() }
 }

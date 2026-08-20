@@ -195,6 +195,9 @@ La aplicación móvil implementa el patrón de arquitectura **MVVM (Model-View-V
  * Actividad principal de la aplicacion movil EduTask.
  * Configura el tema general de la app, inicializa el grafo de navegacion (EduTaskNavGraph)
  * y gestiona el flujo de autenticacion y arranque inicial.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask
 
@@ -212,6 +215,11 @@ import android.content.Context
 import android.os.Build
 
 class MainActivity : ComponentActivity() {
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         createNotificationChannel()
 
@@ -237,6 +245,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: createNotificationChannel.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Recordatorios EduTask"
@@ -269,6 +283,9 @@ class MainActivity : ComponentActivity() {
  * Grafo de navegacion principal de la aplicacion movil con Jetpack Compose Navigation.
  * Define las rutas, argumentos y transiciones entre pantallas para los diferentes roles
  * (Alumno, Profesor, Coordinador y Login).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.navigation
 
@@ -315,23 +332,65 @@ object EduTaskRoutes {
     const val ESTADISTICAS_TAREA = "estadisticas_tarea/{idTarea}/{tituloTarea}"
     const val GRADEBOOK = "gradebook/{idClase}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: homeAlumno.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun homeAlumno(idUsuario: String, nombre: String, carrera: String) =
         "home_alumno/${enc(idUsuario)}/${enc(nombre)}/${enc(carrera)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: homeProfesor.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun homeProfesor(idUsuario: String, nombre: String, clase: String) =
         "home_profesor/${enc(idUsuario)}/${enc(nombre)}/${enc(clase)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: homeCoordinador.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun homeCoordinador(idUsuario: String, nombre: String) =
         "home_coordinador/${enc(idUsuario)}/${enc(nombre)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: listaUsuarios.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun listaUsuarios(filtro: String) = "lista_usuarios/${enc(filtro)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: formularioUsuario.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun formularioUsuario(idUsuario: String? = null) =
         if (idUsuario != null) "formulario_usuario?idUsuario=${enc(idUsuario)}" else "formulario_usuario"
 
+    /**
+     * Metodo principal que ejecuta la operacion: formularioEvento.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun formularioEvento(idEvento: String? = null) =
         if (idEvento != null) "formulario_evento?idEvento=${enc(idEvento)}" else "formulario_evento"
 
+    /**
+     * Metodo principal que ejecuta la operacion: enviarEvidencia.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun enviarEvidencia(
         idAsignacion: String,
         tarea:        Tarea,
@@ -342,17 +401,65 @@ object EduTaskRoutes {
         "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}" +
         if (idEvidencia != null) "?idEvidencia=${enc(idEvidencia)}" else ""
 
+    /**
+     * Metodo principal que ejecuta la operacion: crearTarea.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun crearTarea(idUsuario: String, idTarea: String? = null)  = "crear_tarea/${enc(idUsuario)}" + if (idTarea != null) "?idTarea=${enc(idTarea)}" else ""
+    /**
+     * Metodo principal que ejecuta la operacion: evaluarTarea.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun evaluarTarea(idEvidencia: String, idUsuario: String)  = "evaluar_tarea/${enc(idEvidencia)}/${enc(idUsuario)}"
+    /**
+     * Metodo principal que ejecuta la operacion: alumnosClase.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun alumnosClase(idClase: String, nombreClase: String)  = "alumnos_clase/${enc(idClase)}/${enc(nombreClase)}"
+    /**
+     * Metodo principal que ejecuta la operacion: estadisticasTarea.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun estadisticasTarea(idTarea: String, tituloTarea: String)  = "estadisticas_tarea/${enc(idTarea)}/${enc(tituloTarea)}"
+    /**
+     * Metodo principal que ejecuta la operacion: gradebook.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun gradebook(idClase: String) = "gradebook/${enc(idClase)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: enc.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
+    /**
+     * Metodo principal que ejecuta la operacion: dec.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun dec(s: String?): String = if (s != null) java.net.URLDecoder.decode(s, "UTF-8") else ""
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EduTaskNavGraph.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = EduTaskRoutes.LOGIN) {
 
@@ -587,6 +694,9 @@ fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) 
 /**
  * Modelo de datos representativo de los usuarios de la plataforma (Alumno, Profesor, Coordinador),
  * incluyendo nombre, correo, rol y datos de autenticacion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 
@@ -609,6 +719,9 @@ data class Usuario(
 /**
  * Modelo de datos que representa una clase o asignatura en el sistema EduTask,
  * incluyendo su identificador, nombre, descripcion y enlace.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 
@@ -627,6 +740,9 @@ data class ClaseInfo(
 /**
  * Modelo de datos representativo de una tarea escolar,
  * con titulo, descripcion, fecha de entrega, clase asociada y ponderacion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 
@@ -651,6 +767,9 @@ data class Tarea(
 /**
  * Modelo de datos para las evidencias entregadas por los alumnos,
  * almacenando enlaces de archivos, comentarios, fechas de entrega y estado de revision.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 
@@ -689,6 +808,9 @@ data class EvidenciaTarea(
 /**
  * Pantalla de autenticacion de EduTask que permite el ingreso mediante correo y contrasena,
  * validando credenciales y redirigiendo segun el rol del usuario.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.login
 
@@ -732,6 +854,12 @@ import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla LoginScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _ -> }) {
     val context   = LocalContext.current
     val winSize   = calculateWindowSizeClass(activity = context as Activity)
@@ -747,6 +875,12 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
     val scope           = rememberCoroutineScope()
     val db              = remember { FirebaseFirestore.getInstance() }
 
+    /**
+     * Metodo principal que ejecuta la operacion: doLogin.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun doLogin() {
         if (matricula.isBlank() || password.isBlank()) return
 
@@ -957,12 +1091,24 @@ fun LoginScreen(onLoginSuccess: (String, String, RolUsuario) -> Unit = { _, _, _
 
 @Preview(name = "Login Movil", showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: LoginPreviewMovil.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun LoginPreviewMovil() {
     EduTaskTheme(darkTheme = false, dynamicColor = false) { LoginScreen() }
 }
 
 @Preview(name = "Login Tablet", showBackground = true, widthDp = 800, heightDp = 1280)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: LoginPreviewTablet.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun LoginPreviewTablet() {
     EduTaskTheme(darkTheme = false, dynamicColor = false) { LoginScreen() }
 }
@@ -984,6 +1130,9 @@ private fun LoginPreviewTablet() {
  * Pantalla principal del rol Alumno.
  * Integra la barra de navegacion inferior (Bottom Navigation) y coordina las vistas de
  * Inicio, Tareas, Calificaciones y Perfil.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -1037,6 +1186,12 @@ private val NAV_ITEMS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla HomeAlumnoScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun HomeAlumnoScreen(
     idUsuario: String    = "",
     nombreAlumno: String = "Juan Ramirez",
@@ -1273,10 +1428,22 @@ fun HomeAlumnoScreen(
 
 @Preview(name = "Home Alumno Movil", showBackground = true, showSystemUi = true, widthDp = 360, heightDp = 800)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewAlumnoMovil.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewAlumnoMovil() { EduTaskTheme(darkTheme = false, dynamicColor = false) { HomeAlumnoScreen() } }
 
 @Preview(name = "Home Alumno Tablet", showBackground = true, showSystemUi = true, widthDp = 800, heightDp = 1280)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewAlumnoTablet.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewAlumnoTablet() { EduTaskTheme(darkTheme = false, dynamicColor = false) { HomeAlumnoScreen() } }
 ```
 
@@ -1287,6 +1454,9 @@ private fun PreviewAlumnoTablet() { EduTaskTheme(darkTheme = false, dynamicColor
 /**
  * ViewModel que administra el estado global del alumno (clases inscritas, tareas pendientes,
  * resumen academico y datos de sesion).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -1352,6 +1522,11 @@ class HomeAlumnoViewModel : ViewModel() {
 
     private var enrolledClassesNames = mutableListOf<String>()
 
+    /**
+     * Manejador de evento para la accion onCleared.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCleared() {
         super.onCleared()
         asignacionesListener?.remove()
@@ -1360,6 +1535,11 @@ class HomeAlumnoViewModel : ViewModel() {
         tareasListener?.remove()
     }
 
+    /**
+     * Obtiene o recupera datos asociados a fetchUserData desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun fetchUserData(idUsuario: String) {
         if (idUsuario.isBlank()) {
             _uiState.value = HomeAlumnoState.Error("ID de usuario no válido")
@@ -1379,6 +1559,12 @@ class HomeAlumnoViewModel : ViewModel() {
         loadData(idUsuario)
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: refresh.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun refresh(idUsuario: String) {
         if (_isRefreshing.value) return
         viewModelScope.launch {
@@ -1389,6 +1575,11 @@ class HomeAlumnoViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Guarda o actualiza los datos de updateAccount en la base de datos.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun updateAccount(idUsuario: String, nuevoCorreo: String, nuevaContrasena: String, onComplete: (Boolean) -> Unit) {
         val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
         if (nuevaContrasena.isNotBlank()) {
@@ -1404,6 +1595,12 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: scheduleReminders.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun scheduleReminders(context: Context, tareas: List<TareaItem>) {
         val now = System.currentTimeMillis()
         val twoHoursInMillis = 2 * 60 * 60 * 1000L
@@ -1433,6 +1630,11 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Obtiene o recupera datos asociados a loadData desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun loadData(idUsuario: String) {
         // Iniciar la sincronización automática de nuevas tareas
         startAutoSync(idUsuario)
@@ -1602,6 +1804,12 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: startAutoSync.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun startAutoSync(idUsuario: String) {
         inscripcionesListener?.remove()
         tareasListener?.remove()
@@ -1677,6 +1885,12 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: unirseAClase.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun unirseAClase(codigoClase: String, idUsuario: String) {
         if (codigoClase.isBlank() || idUsuario.isBlank()) return
 
@@ -1746,6 +1960,9 @@ class HomeAlumnoViewModel : ViewModel() {
 /**
  * Pestana de inicio del alumno que presenta un resumen de bienvenida, proximas entregas,
  * avisos importantes y accesos rapidos a sus clases.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -1774,6 +1991,11 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente interno que renderiza el contenido de InicioContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun InicioContent(
     modifier: Modifier = Modifier, 
     pendientes: Int, 
@@ -1883,6 +2105,11 @@ fun InicioContent(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EventoCarouselCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoCarouselCard(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
@@ -1931,6 +2158,9 @@ fun EventoCarouselCard(evento: Evento) {
 /**
  * Pestana de tareas del alumno que organiza y filtra las tareas por estado
  * (pendientes, entregadas y calificadas) con acceso directo al detalle de cada una.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -1960,6 +2190,11 @@ import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente interno que renderiza el contenido de TareasContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (String) -> Unit,
                   tareas: List<TareaItem>, pendienteCount: Int, clases: List<String>,
                   isRefreshing: Boolean, onRefresh: () -> Unit,
@@ -2105,6 +2340,11 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar TareaCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false, onClick: () -> Unit = {}) {
     val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
     ElevatedCard(
@@ -2179,6 +2419,12 @@ fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false,
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EstadoChip.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EstadoChip(estado: EstadoEvidencia) {
     val label = when (estado) { EstadoEvidencia.Pendiente -> "Pend."; EstadoEvidencia.Aprobada -> "Aprob."; EstadoEvidencia.Rechazada -> "Rec." }
     val icon  = when (estado) { EstadoEvidencia.Pendiente -> Icons.Default.Schedule; EstadoEvidencia.Aprobada -> Icons.Default.CheckCircle; EstadoEvidencia.Rechazada -> Icons.Default.Cancel }
@@ -2191,6 +2437,11 @@ fun EstadoChip(estado: EstadoEvidencia) {
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ClaseGridItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ClaseGridItem(nombre: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     ElevatedCard(
         onClick = onClick,
@@ -2225,6 +2476,9 @@ fun ClaseGridItem(nombre: String, isSelected: Boolean, modifier: Modifier = Modi
 /**
  * Componente de interfaz para la consulta de calificaciones del alumno.
  * Muestra el listado de materias, promedios acumulados y desglose de notas por tarea.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -2254,6 +2508,11 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente interno que renderiza el contenido de CalificacionesContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CalificacionesContent(
     modifier: Modifier = Modifier, 
     tareas: List<TareaItem>, 
@@ -2298,6 +2557,11 @@ fun CalificacionesContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ClaseGradesAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, promedio: Double?, onVerTarea: (TareaItem) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     
@@ -2379,6 +2643,11 @@ fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, promedio:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar CalificacionCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CalificacionCard(item: TareaItem, onClick: (TareaItem) -> Unit) {
     val calificacionStr = item.calificacion?.toString() ?: "-"
     
@@ -2457,6 +2726,9 @@ fun CalificacionCard(item: TareaItem, onClick: (TareaItem) -> Unit) {
 /**
  * Pestana de perfil del alumno que muestra su informacion personal, matricula, correo
  * y opciones de configuracion de cuenta / cierre de sesion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -2490,6 +2762,11 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de PerfilContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun PerfilContent(
     modifier: Modifier = Modifier, 
     nombre: String, 
@@ -2614,6 +2891,11 @@ fun PerfilContent(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar StatCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
     ElevatedCard(
         modifier = modifier,
@@ -2642,6 +2924,11 @@ fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.co
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ClaseStatAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ClaseStatAccordion(nombreClase: String, tareas: List<TareaItem>) {
     var expanded by remember { mutableStateOf(false) }
     val tareasEntregadas = tareas.filter { it.estado != EstadoEvidencia.Pendiente }.size
@@ -2725,6 +3012,11 @@ fun ClaseStatAccordion(nombreClase: String, tareas: List<TareaItem>) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar AjustesCuentaAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AjustesCuentaAccordion(
     correoActual: String = "",
     onGuardarCambios: (String, String) -> Unit
@@ -2833,6 +3125,11 @@ fun AjustesCuentaAccordion(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ShortcutItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ShortcutItem(icon: ImageVector, title: String, subtitle: String) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -2863,6 +3160,11 @@ fun ShortcutItem(icon: ImageVector, title: String, subtitle: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar VideoConferenciasAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun VideoConferenciasAccordion(clases: List<String>) {
     var expanded by remember { mutableStateOf(false) }
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
@@ -2971,6 +3273,9 @@ fun VideoConferenciasAccordion(clases: List<String>) {
 /**
  * Pantalla para que el alumno suba y envie la evidencia de una tarea asignada,
  * permitiendo adjuntar documentos/imagenes, redactar notas y confirmar la entrega.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -3033,6 +3338,12 @@ import com.pmlp.edutask.ui.components.VisorArchivoDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla EnviarEvidenciaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EnviarEvidenciaScreen(
     tarea:        Tarea,
     idAsignacion: String,
@@ -3104,6 +3415,12 @@ fun EnviarEvidenciaScreen(
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: addArchivo.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun addArchivo(archivo: ArchivoSubir) {
         if (archivosSubir.size < 3) {
             archivosSubir = archivosSubir + archivo
@@ -3214,6 +3531,11 @@ fun EnviarEvidenciaScreen(
         }
     }
 
+    /**
+     * Abre el recurso o vista abrirGaleria para la interaccion del usuario.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun abrirGaleria() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Android 13+: PickVisualMedia no necesita permisos, lanzar directo
@@ -3894,6 +4216,12 @@ fun EnviarEvidenciaScreen(
 }
 
 // ── Helper: crear URI segura para FileProvider ───────────────────────────────
+/**
+ * Metodo principal que ejecuta la operacion: crearUriParaFoto.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun crearUriParaFoto(context: Context): Uri {
     // Usar estrictamente caché interna para evitar el error de "Tarjeta SD" en emuladores
     val cacheDir = File(context.cacheDir, "camera").also { it.mkdirs() }
@@ -3906,6 +4234,11 @@ private fun crearUriParaFoto(context: Context): Uri {
 }
 
 // ── Helper: Decodificar Bitmap previniendo OutOfMemoryError (Crashes) ──────────
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeUriToSafeBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeUriToSafeBitmap(context: Context, uri: Uri): Bitmap? {
     return try {
         // 1. Decodificar solo los límites para obtener las dimensiones reales
@@ -3939,6 +4272,11 @@ private fun decodeUriToSafeBitmap(context: Context, uri: Uri): Bitmap? {
 }
 
 // ── Helper: Obtener nombre de archivo de la URI ──────────────────────────────
+/**
+ * Obtiene o recupera datos asociados a getFileName desde la base de datos o API.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun getFileName(context: Context, uri: Uri): String {
     var result: String? = null
     if (uri.scheme == "content") {
@@ -3965,6 +4303,11 @@ private fun getFileName(context: Context, uri: Uri): String {
 }
 
 // ── Helper: Decodificar Base64 a Bitmap ──────────────────────────────────────
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     return try {
         val bytes = android.util.Base64.decode(base64Str, android.util.Base64.DEFAULT)
@@ -3974,6 +4317,11 @@ private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     }
 }
 
+/**
+ * Abre el recurso o vista abrirArchivoBase64 para la interaccion del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
     try {
         val cleanString = if (base64Str.contains(",")) {
@@ -4002,6 +4350,12 @@ private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: St
 @Preview(name = "Enviar Evidencia", showBackground = true, showSystemUi = true,
          widthDp = 360, heightDp = 800)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewEnviarEvidencia.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewEnviarEvidencia() {
     EduTaskTheme(darkTheme = false, dynamicColor = false) {
         EnviarEvidenciaScreen(
@@ -4027,6 +4381,9 @@ private fun PreviewEnviarEvidencia() {
 /**
  * ViewModel encargado de gestionar la logica de subida y registro de evidencias en Firestore,
  * controlando los estados de carga, progreso y manejo de errores.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -4087,6 +4444,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
 
+    /**
+     * Metodo principal que ejecuta la operacion: cargarEvidenciaEnviada.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun cargarEvidenciaEnviada(idEvidencia: String) {
         if (idEvidencia.isBlank()) return
         viewModelScope.launch {
@@ -4129,6 +4492,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: anularEvidencia.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun anularEvidencia(idEvidencia: String, onSuccess: () -> Unit) {
         if (idEvidencia.isBlank()) return
         viewModelScope.launch {
@@ -4147,6 +4516,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
     }
 
     // ── Enviar evidencia ─────────────────────────────────────────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: enviarEvidencia.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun enviarEvidencia(
         context: android.content.Context,
         idAsignacion: String,
@@ -4238,11 +4613,23 @@ class EnviarEvidenciaViewModel : ViewModel() {
     }
 
     // ── Resetear estado (para re-intentar o navegar atrás) ──────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: resetState.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun resetState() {
         _uiState.value = EnviarEvidenciaUiState.Idle
     }
 
     // ── Helper privado: Bitmap → Base64 String (máx. 800×800, 60% JPEG) ──────
+    /**
+     * Metodo principal que ejecuta la operacion: bitmapToBase64.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val scaled = if (bitmap.width > 800 || bitmap.height > 800) {
             val ratio = minOf(800f / bitmap.width, 800f / bitmap.height)
@@ -4261,6 +4648,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
     }
 
     // ── Helper privado: ByteArray → Base64 String ────────────────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: bytesToBase64.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun bytesToBase64(bytes: ByteArray): String {
         return Base64.encodeToString(bytes, Base64.NO_WRAP)
     }
@@ -4278,6 +4671,9 @@ class EnviarEvidenciaViewModel : ViewModel() {
 /**
  * Pantalla principal del rol Profesor que administra las clases activas, tareas asignadas,
  * revisiones pendientes y sincronizacion con dispositivos Wear OS.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -4354,6 +4750,12 @@ private val PROF_NAV = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla HomeProfesorScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun HomeProfesorScreen(
     idUsuario: String        = "",
     nombreProfesor: String   = "Mtro. Perez",
@@ -4897,6 +5299,11 @@ fun HomeProfesorScreen(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de InicioContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun InicioContent(
     pendientes: Int,
     claseActual: String,
@@ -5041,6 +5448,11 @@ private fun InicioContent(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de TareasContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun TareasContent(
     tareas: List<Tarea>,
     clases: List<ClaseInfo>,
@@ -5156,6 +5568,11 @@ private fun TareasContent(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de ClasesContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ClasesContent(
     clases: List<ClaseInfo>,
     inscripciones: Map<String, List<String>>,
@@ -5233,6 +5650,11 @@ private fun ClasesContent(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de PerfilContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PerfilContent(
     nombre: String,
     clasesCount: Int,
@@ -5336,6 +5758,11 @@ private fun PerfilContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar AjustesCuentaAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AjustesCuentaAccordion(
     correoActual: String = "",
     onGuardarCambios: (String, String) -> Unit
@@ -5443,6 +5870,11 @@ fun AjustesCuentaAccordion(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar StatCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
@@ -5462,6 +5894,11 @@ private fun StatCard(title: String, value: String, icon: ImageVector, color: and
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ShortcutItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ShortcutItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -5490,6 +5927,11 @@ private fun ShortcutItem(icon: ImageVector, title: String, subtitle: String, onC
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EvidenciaListItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EvidenciaListItem(
     evidencia: EvidenciaTarea,
     onVerClick: (EvidenciaTarea) -> Unit
@@ -5518,6 +5960,11 @@ fun EvidenciaListItem(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar AccesoRapidoCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier) {
     ElevatedCard(modifier = modifier,
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)) {
@@ -5534,12 +5981,24 @@ private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier
     }
 }
 
+/**
+ * Metodo principal que ejecuta la operacion: generateShortCode.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun generateShortCode(): String {
     val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return (1..6).map { chars.random() }.joinToString("")
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EventoCarouselCardProfesor.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoCarouselCardProfesor(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
@@ -5581,6 +6040,12 @@ fun EventoCarouselCardProfesor(evento: Evento) {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: InicioSkeleton.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun InicioSkeleton() {
     Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
@@ -5630,6 +6095,12 @@ private fun InicioSkeleton() {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: TareasSkeleton.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun TareasSkeleton() {
     Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
@@ -5659,6 +6130,12 @@ private fun TareasSkeleton() {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: ClasesSkeleton.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ClasesSkeleton() {
     Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
@@ -5696,6 +6173,9 @@ private fun ClasesSkeleton() {
 /**
  * Pantalla para que el profesor cree o modifique asignaciones academicas,
  * definiendo instrucciones, fechas limite, ponderaciones y archivos adjuntos.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -5741,6 +6221,12 @@ data class ArchivoAdjunto(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla CrearTareaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CrearTareaScreen(
     idUsuario: String = "",
     idTarea: String? = null,
@@ -6295,6 +6781,11 @@ fun CrearTareaScreen(
     }
 }
 
+/**
+ * Obtiene o recupera datos asociados a getFileName desde la base de datos o API.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun getFileName(context: android.content.Context, uri: Uri): String {
     var result: String? = null
     if (uri.scheme == "content") {
@@ -6328,6 +6819,9 @@ private fun getFileName(context: android.content.Context, uri: Uri): String {
 /**
  * Pantalla que muestra el listado de alumnos inscritos en una clase especifica,
  * permitiendo al profesor gestionar inscripciones y revisar el progreso individual.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -6364,6 +6858,12 @@ data class AlumnoInfo(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla AlumnosClaseScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AlumnosClaseScreen(
     idClase: String,
     nombreClase: String,
@@ -6690,6 +7190,9 @@ fun AlumnosClaseScreen(
 /**
  * Pantalla donde el profesor revisa las evidencias enviadas por los alumnos,
  * asigna calificaciones numericas y anade retroalimentacion personalizada.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -6737,6 +7240,12 @@ import androidx.compose.ui.layout.ContentScale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla EvaluarTareaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EvaluarTareaScreen(
     idEvidencia: String,
     idUsuario: String, // Profesor ID
@@ -7332,6 +7841,11 @@ fun EvaluarTareaScreen(
     }
 }
 
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeBase64ToBitmap(base64Str: String): android.graphics.Bitmap? {
     return try {
         val cleanString = if (base64Str.contains(",")) {
@@ -7346,6 +7860,11 @@ private fun decodeBase64ToBitmap(base64Str: String): android.graphics.Bitmap? {
     }
 }
 
+/**
+ * Abre el recurso o vista abrirArchivoBase64 para la interaccion del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
     try {
         val cleanString = if (base64Str.contains(",")) {
@@ -7378,6 +7897,9 @@ private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: St
 /**
  * Pantalla de metricas y estadisticas de una tarea en particular (promedio de calificaciones,
  * tasa de entrega, alumnos evaluados y pendientes).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -7412,6 +7934,12 @@ data class StudentGradeReport(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla EstadisticasTareaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EstadisticasTareaScreen(
     idTarea: String,
     tituloTarea: String,
@@ -7753,11 +8281,22 @@ fun EstadisticasTareaScreen(
     }
 }
 
+/**
+ * Metodo principal que ejecuta la operacion: tempAlumnosList.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun tempAlumnosList(list: List<StudentGradeReport>): List<StudentGradeReport> {
     return list.sortedBy { it.nombre }
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar StatCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun StatCard(
     title: String,
     value: String,
@@ -7804,6 +8343,9 @@ private fun StatCard(
 /**
  * Pantalla de libro de calificaciones (Gradebook) del profesor,
  * presentando una matriz completa de alumnos versus tareas con calculo automatico de promedios.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -7832,6 +8374,12 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla GradebookScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun GradebookScreen(
     idClase: String,
     viewModel: GradebookViewModel,
@@ -8023,6 +8571,9 @@ fun GradebookScreen(
 /**
  * ViewModel que calcula de forma reactiva las calificaciones y promedios generales
  * por alumno, grupo y tarea para la vista de Gradebook.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -8059,6 +8610,11 @@ class GradebookViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(GradebookState())
     val uiState: StateFlow<GradebookState> = _uiState
 
+    /**
+     * Obtiene o recupera datos asociados a loadGradebook desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun loadGradebook(idClase: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -8186,6 +8742,12 @@ class GradebookViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: exportarAExcel.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun exportarAExcel(context: Context): Uri? {
         val state = _uiState.value
         if (state.alumnos.isEmpty() || state.tareas.isEmpty()) return null
@@ -8236,6 +8798,9 @@ class GradebookViewModel : ViewModel() {
 /**
  * Pantalla principal del rol Coordinador con acceso a la gestion de eventos institucionales,
  * administracion de usuarios y metricas del sistema.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -8260,6 +8825,12 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla HomeCoordinadorScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun HomeCoordinadorScreen(
     idUsuario: String,
     nombreCoordinador: String,
@@ -8354,6 +8925,11 @@ fun HomeCoordinadorScreen(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar CoordinadorCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CoordinadorCard(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
     Card(
         modifier = Modifier
@@ -8415,6 +8991,9 @@ fun CoordinadorCard(title: String, subtitle: String, icon: ImageVector, onClick:
 /**
  * ViewModel del modulo de Coordinador que gestiona la creacion, edicion y eliminacion
  * de eventos institucionales y el catalogo general de usuarios.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -8445,6 +9024,11 @@ class CoordinadorViewModel : ViewModel() {
         fetchUsuarios()
     }
 
+    /**
+     * Obtiene o recupera datos asociados a fetchUsuarios desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun fetchUsuarios() {
         viewModelScope.launch {
             _uiState.value = CoordinadorUiState.Loading
@@ -8473,6 +9057,11 @@ class CoordinadorViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Guarda o actualiza los datos de saveUsuario en la base de datos.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun saveUsuario(usuario: Usuario, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -8517,6 +9106,11 @@ class CoordinadorViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Elimina el registro correspondiente a deleteUsuario del sistema.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun deleteUsuario(idUsuario: String) {
         viewModelScope.launch {
             try {
@@ -8537,6 +9131,9 @@ class CoordinadorViewModel : ViewModel() {
 /**
  * Pantalla con formulario para que el coordinador publique o actualice eventos y avisos
  * institucionales con titulo, fecha, descripcion, lugar e imagen.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -8567,6 +9164,12 @@ import com.pmlp.edutask.ui.EventosUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla FormularioEventoScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun FormularioEventoScreen(
     viewModel: EventosSharedViewModel,
     idEvento: String?,
@@ -8874,6 +9477,11 @@ fun FormularioEventoScreen(
     }
 }
 
+/**
+ * Realiza el procesamiento y conversion de archivos (compressImageToBase64).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun compressImageToBase64(context: Context, uri: Uri): String? {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri) ?: return null
@@ -8913,6 +9521,9 @@ fun compressImageToBase64(context: Context, uri: Uri): String? {
 /**
  * Pantalla que despliega el listado completo de eventos y noticias escolares registradas,
  * con opciones para crear, editar o eliminar publicaciones.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -8940,6 +9551,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla ListaEventosScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ListaEventosScreen(
     viewModel: EventosSharedViewModel,
     onBack: () -> Unit,
@@ -9013,6 +9630,11 @@ fun ListaEventosScreen(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EventoItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoItem(
     evento: Evento,
     onEdit: () -> Unit,
@@ -9062,6 +9684,9 @@ fun EventoItem(
 /**
  * Pantalla con formulario para registrar o actualizar datos de usuarios (alumnos, profesores,
  * coordinadores), asignando roles y credenciales.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -9082,6 +9707,12 @@ import com.pmlp.edutask.model.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla FormularioUsuarioScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun FormularioUsuarioScreen(
     viewModel: CoordinadorViewModel,
     idUsuario: String?,
@@ -9242,6 +9873,9 @@ fun FormularioUsuarioScreen(
 /**
  * Pantalla con el directorio de usuarios del sistema, permitiendo busquedas, filtros por rol
  * y gestion de cuentas de usuario.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -9264,6 +9898,12 @@ import com.pmlp.edutask.model.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla ListaUsuariosScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ListaUsuariosScreen(
     viewModel: CoordinadorViewModel,
     filtroInicial: String, // "Alumno" o "Profesor"
@@ -9353,6 +9993,11 @@ fun ListaUsuariosScreen(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar UsuarioItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun UsuarioItem(
     usuario: Usuario,
     onEdit: () -> Unit,
@@ -9397,6 +10042,9 @@ fun UsuarioItem(
 /**
  * Dialogo modal reutilizable para previsualizar archivos, documentos e imagenes adjuntas
  * directamente dentro de la aplicacion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.components
 
@@ -9427,6 +10075,12 @@ import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: VisorArchivoDialog.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun VisorArchivoDialog(
     base64String: String,
     nombreArchivo: String,
@@ -9588,6 +10242,9 @@ fun VisorArchivoDialog(
 /**
  * Componente de carga visual (Skeleton / Shimmer) que muestra marcadores de posicion animados
  * mientras se cargan datos asincronos desde la red o base de datos.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.components
 
@@ -9602,6 +10259,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: ShimmerPlaceholder.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ShimmerPlaceholder(
     modifier: Modifier = Modifier,
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(8.dp)
@@ -9634,6 +10297,9 @@ fun ShimmerPlaceholder(
 /**
  * Componente reutilizable de interfaz que renderiza ilustraciones y mensajes informativos
  * cuando una lista o seccion no cuenta con datos para mostrar.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.components
 
@@ -9651,6 +10317,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EmptyStateIllustration.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EmptyStateIllustration(
     icon: ImageVector,
     title: String,
@@ -9709,6 +10381,9 @@ fun EmptyStateIllustration(
 ```kotlin
 /**
  * Definicion de la paleta de colores del tema Material 3 para la aplicacion movil EduTask.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.theme
 
@@ -9792,6 +10467,9 @@ val EduSurfaceContainerHighestDark = Color(0xFF36343B)
 /**
  * Configuracion del tema visual de Compose para la app movil, soportando modo claro/oscuro
  * y esquemas de color personalizados.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.theme
 
@@ -9878,6 +10556,12 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EduTaskTheme.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EduTaskTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
@@ -9901,6 +10585,9 @@ fun EduTaskTheme(
 ```kotlin
 /**
  * Configuracion de estilos tipograficos (Typography) para la aplicacion movil EduTask.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.theme
 
@@ -9944,6 +10631,9 @@ val EduTaskTypography = Typography(
 /**
  * Worker en segundo plano (WorkManager) para enviar recordatorios y notificaciones
  * sobre tareas proximas a vencer a los estudiantes.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.worker
 
@@ -9959,6 +10649,12 @@ class TareaReminderWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
+    /**
+     * Metodo principal que ejecuta la operacion: doWork.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override suspend fun doWork(): Result {
         val tareaNombre = inputData.getString("TAREA_NOMBRE") ?: "Tarea pendiente"
         val notifId = inputData.getString("TAREA_ID")?.hashCode() ?: System.currentTimeMillis().toInt()
@@ -9968,6 +10664,12 @@ class TareaReminderWorker(
         return Result.success()
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: mostrarNotificacion.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun mostrarNotificacion(tareaNombre: String, notifId: Int) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -9990,6 +10692,9 @@ class TareaReminderWorker(
 /**
  * Funciones de utilidad y extensiones para operaciones con Firebase Firestore
  * (conversion de datos, queries seguras y manejo de colecciones).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.utils
 

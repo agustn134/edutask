@@ -1,6 +1,9 @@
 /**
  * ViewModel compartido entre modulos que sincroniza en tiempo real los eventos escolares
  * y recalcula los promedios y metricas de grupos para el modulo de TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui
 
@@ -49,6 +52,11 @@ class EventosSharedViewModel : ViewModel() {
         fetchEstadisticasInstitucionales()
     }
 
+    /**
+     * Obtiene o recupera datos asociados a fetchEventos desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun fetchEventos() {
         Log.d("FIRESTORE_DEBUG", "Iniciando listener a la coleccion 'eventos_escolares'...")
         _uiState.value = EventosUiState.Loading
@@ -150,6 +158,12 @@ class EventosSharedViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: calcularEstadisticas.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private suspend fun calcularEstadisticas() {
         // 1. Obtener todas las clases
         val clasesSnap = db.collection("clases").get().await()
@@ -280,11 +294,21 @@ class EventosSharedViewModel : ViewModel() {
         Log.d("ESTADISTICAS_TV", "Estadísticas actualizadas: ${grupos.size} grupos procesados")
     }
 
+    /**
+     * Manejador de evento para la accion onCleared.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCleared() {
         super.onCleared()
         evidenciasListener?.remove()
     }
 
+    /**
+     * Guarda o actualiza los datos de saveEvento en la base de datos.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun saveEvento(evento: Evento, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -309,6 +333,11 @@ class EventosSharedViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Elimina el registro correspondiente a deleteEvento del sistema.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun deleteEvento(idEvento: String) {
         viewModelScope.launch {
             try {

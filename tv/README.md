@@ -1,28 +1,25 @@
 # Módulo Android TV — Documentación Técnica Completa
 
 > **Proyecto:** EduTask — Plataforma de Gestión Académica
-> **Módulo:** `:tv` — Tablón Inteligente y Dashboard de Monitoreo en Pantalla Grande (Android TV / Google TV)
-> **Propósito:** Funcionar como un centro de información y monitoreo institucional en tiempo real que combina avisos escolares con métricas académicas actualizadas automáticamente cuando los profesores califican, con gráficas de barras por actividad y navegación optimizada para control remoto (D-Pad).
+> **Módulo:** `:tv` — Tablón Inteligente para Pantallas Grandes (Android TV / Google TV)
+> **Propósito:** Funcionar como un tablón digital institucional que muestra noticias/eventos escolares y un dashboard de monitoreo académico en tiempo real con gráficas de barras por grupo.
 
 ---
 
 ## Tabla de Contenidos
 
-1. [Dependencias y Librerías (build.gradle.kts)](#1-dependencias-y-librerías)
-2. [Arquitectura General y Flujo de Datos](#2-arquitectura-general-y-flujo-de-datos)
-3. [Archivo 1: Theme.kt — Tema Oscuro Cinematográfico](#3-archivo-1-themekt--tema-oscuro-cinematográfico)
-4. [Archivo 2: Color.kt — Paleta de Colores TV](#4-archivo-2-colorkt--paleta-de-colores-tv)
-5. [Archivo 3: Type.kt — Tipografía para Pantallas Grandes](#5-archivo-3-typekt--tipografía-para-pantallas-grandes)
-6. [Archivo 4: MainActivitytv.kt — Actividad Principal y Reproductor de Audio](#6-archivo-4-mainactivitytvkt--actividad-principal-y-reproductor-de-audio)
-7. [Archivo 5: TVHomeScreen.kt — Carrusel y Dashboard con Gráfica de Barras](#7-archivo-5-tvhomescreenkt--carrusel-y-dashboard-con-gráfica-de-barras)
-8. [Módulo Core: EventosSharedViewModel y Modelos de Datos](#8-módulo-core-eventossharedviewmodel-y-modelos-de-datos)
-9. [Guía de Compilación y Ejecución](#9-guía-de-compilación-y-ejecución)
+1. [Dependencias y Librerías](#1-dependencias-y-librerías)
+2. [Arquitectura General](#2-arquitectura-general)
+3. [Archivo 1: Color.kt — Paleta de Colores](#3-archivo-1-colorkt--paleta-de-colores)
+4. [Archivo 2: Type.kt — Tipografía](#4-archivo-2-typekt--tipografía)
+5. [Archivo 3: Theme.kt — Tema Visual TV](#5-archivo-3-themekt--tema-visual-tv)
+6. [Archivo 4: MainActivitytv.kt — Actividad Principal y Reproductor](#6-archivo-4-mainactivitytvkt--actividad-principal-y-reproductor)
+7. [Archivo 5: TVHomeScreen.kt — Pantalla Principal con Carrusel y Dashboard](#7-archivo-5-tvhomescreenkt--pantalla-principal-con-carrusel-y-dashboard)
+8. [Dependencia: EventosSharedViewModel.kt (módulo Core)](#8-dependencia-eventossharedviewmodelkt-módulo-core)
 
 ---
 
 ## 1. Dependencias y Librerías
-
-Archivo `tv/build.gradle.kts`:
 
 ```kotlin
 plugins {
@@ -88,120 +85,70 @@ dependencies {
 }
 ```
 
-### Explicación de dependencias:
-- **`project(":core")`**: Conecta con el módulo compartido que contiene los modelos `Evento`, `EstadisticaGrupo`, `PromedioMateria` y el `EventosSharedViewModel`.
-- **`androidx.tv:tv-material`**: Componentes visuales especializados para Smart TV (Material 3 for TV: `Surface`, `ClickableSurfaceDefaults`, `Border`).
-- **`androidx.tv:tv-foundation`**: Primitivas de foco y navegación espacial para control remoto (D-Pad).
-- **`androidx.media3:media3-exoplayer`**: Reproductor de audio de alto rendimiento para emitir el himno institucional en bucle como música de fondo.
-- **`androidx.lifecycle:lifecycle-runtime-compose`**: Permite el uso de `collectAsStateWithLifecycle()` para consumir `StateFlow` respetando el ciclo de vida de la pantalla.
-- **`com.google.firebase:firebase-firestore`**: Conexión a la base de datos NoSQL de Firestore con listeners en tiempo real (`addSnapshotListener`).
-- **`io.coil-kt:coil-compose`**: Carga y renderizado asíncrono de imágenes de eventos (tanto URLs remotas como Base64).
+**Explicación de cada dependencia:**
+
+| Línea | Librería | Para qué se usa |
+|---|---|---|
+| `project(":core")` (39) | Módulo Core compartido | Modelos `Evento`, `EstadisticaGrupo` y `EventosSharedViewModel` |
+| `media3-exoplayer` (40) | Media3 ExoPlayer | Reproduce el himno institucional en bucle como audio de fondo |
+| `lifecycle-runtime-compose` (41) | Lifecycle Compose | `collectAsStateWithLifecycle()` para recolectar StateFlows de forma segura |
+| `tv-foundation` (51) | TV Foundation | Primitivas de enfoque y navegación para control remoto (D-Pad) |
+| `tv-material` (52) | TV Material 3 | Componentes `Surface`, `Text`, `MaterialTheme` optimizados para TV a 10 pies |
+| `firebase-firestore` (58) | Firebase Firestore | Conexión en tiempo real a la base de datos |
+| `coil-compose` (59) | Coil | Carga asíncrona de imágenes de eventos (URLs e imágenes Base64) |
 
 ---
 
-## 2. Arquitectura General y Flujo de Datos
+## 2. Arquitectura General
 
 ```
-                   ┌──────────────────────────────────────────────┐
-                   │            Firebase Firestore                │
-                   │  - eventos_escolares                         │
-                   │  - evidencias_tarea (addSnapshotListener)    │
-                   │  - clases, tareas, clase_alumno              │
-                   └──────────────────────┬───────────────────────┘
-                                          │ (Tiempo real)
-                                          ▼
-                   ┌──────────────────────────────────────────────┐
-                   │        EventosSharedViewModel (Core)         │
-                   │  - uiState: StateFlow<EventosUiState>        │
-                   │  - estadisticasState: StateFlow<...>         │
-                   │  - calcularEstadisticas() [7 pasos]          │
-                   └──────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-                   ┌──────────────────────────────────────────────┐
-                   │             MainActivitytv                   │
-                   │  - ExoPlayer (Himno en bucle continuo)       │
-                   │  - EdutaskTheme (Modo oscuro forzado)        │
-                   │  - Surface + TVHomeScreen                    │
-                   └──────────────────────┬───────────────────────┘
-                                          │
-                                          ▼
-                   ┌──────────────────────────────────────────────┐
-                   │               TVHomeScreen                   │
-                   │  - Combina CarouselPage.Evento y Grupo       │
-                   │  - AutoCarousel (Rotación cada 6 segundos)   │
-                   └──────────────┬────────────────┬──────────────┘
-                                  │                │
-                                  ▼                ▼
-                     ┌─────────────────────┐ ┌──────────────────────────┐
-                     │   EventoHeroCard    │ │  GrupoEstadisticaCard    │
-                     │  (Noticias/Avisos)  │ │  (Dashboard + Barras)    │
-                     └─────────────────────┘ └──────────────────────────┘
-```
-
-### Paso a paso del flujo en TV:
-1. **Arranque:** `MainActivitytv` inicializa el `ExoPlayer` con el audio institucional y monta la vista principal dentro del tema oscuro.
-2. **Escucha en tiempo real:** `EventosSharedViewModel` se suscribe a `eventos_escolares` y a `evidencias_tarea`. Cada vez que un profesor califica en la app móvil o reloj, se recalculan automáticamente los promedios de todos los grupos.
-3. **Construcción de Diapositivas:** `TVHomeScreen` unifica los eventos escolares y cada clase registrada en una lista de `CarouselPage`.
-4. **Presentación Automatizada:** `AutoCarousel` rota suavemente cada 6 segundos con `HorizontalPager` y muestra indicadores visuales diferenciados (círculos para noticias, cuadrados para grupos).
-
----
-
-## 3. Archivo 1: `Theme.kt` — Tema Oscuro Cinematográfico
-
-**Ruta:** `tv/src/main/java/com/pmlp/tv/ui/theme/Theme.kt`
-
-**¿Qué hace?** Configura el tema global de Material 3 para TV (`androidx.tv.material3.MaterialTheme`). Fuerza el **modo oscuro por defecto (`isInDarkTheme = true`)** con colores oscuros profundos (`Color(0xFF0E0B16)`), evitando pantallas blancas lavadas y asegurando máximo contraste en salas y proyectores.
-
-```kotlin
-/**
- * Configuracion del tema de Compose para Android TV (androidx.tv.material3).
- */
-package com.pmlp.tv.ui.theme
-
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.darkColorScheme
-
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun EdutaskTheme(
-    isInDarkTheme: Boolean = true,
-    content: @Composable () -> Unit,
-) {
-    val colorScheme = darkColorScheme(
-        primary = Purple80,
-        secondary = PurpleGrey80,
-        tertiary = Pink80,
-        background = Color(0xFF0E0B16),
-        surface = Color(0xFF1B1528),
-        surfaceVariant = Color(0xFF28203B),
-        onBackground = Color(0xFFF4EFF4),
-        onSurface = Color(0xFFF4EFF4),
-        onSurfaceVariant = Color(0xFFCAC4D0)
-    )
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
-}
+                   ┌──────────────────────────────────────┐
+                   │        Firebase Firestore             │
+                   │  - eventos_escolares                  │
+                   │  - evidencias_tarea (SnapshotListener)│
+                   │  - clases, tareas, asignaciones_tarea │
+                   └──────────────────┬───────────────────┘
+                                      │
+                                      ▼
+                   ┌──────────────────────────────────────┐
+                   │      EventosSharedViewModel (Core)   │
+                   │  - uiState: StateFlow<EventosUiState>│
+                   │  - estadisticasState: StateFlow<...> │
+                   └──────────────────┬───────────────────┘
+                                      │
+                                      ▼
+                   ┌──────────────────────────────────────┐
+                   │         MainActivitytv               │
+                   │  - ExoPlayer (himno en bucle)        │
+                   │  - Surface + TVHomeScreen            │
+                   └──────────────────┬───────────────────┘
+                                      │
+                                      ▼
+                   ┌──────────────────────────────────────┐
+                   │           TVHomeScreen               │
+                   │  - Combina List<CarouselPage>        │
+                   │  - AutoCarousel (rotación cada 6s)   │
+                   └──────────┬────────────────┬──────────┘
+                              │                │
+                              ▼                ▼
+                     ┌─────────────────┐ ┌──────────────────────┐
+                     │ EventoHeroCard  │ │ GrupoEstadisticaCard │
+                     │ (Noticias)      │ │ (Dashboard + Barras) │
+                     └─────────────────┘ └──────────────────────┘
 ```
 
 ---
 
-## 4. Archivo 2: `Color.kt` — Paleta de Colores TV
+## 3. Archivo 1: `Color.kt` — Paleta de Colores
 
 **Ruta:** `tv/src/main/java/com/pmlp/tv/ui/theme/Color.kt`
-
-**¿Qué hace?** Define las tonalidades violetas institucionales (`Purple80`, `PurpleGrey80`, `Pink80`) utilizadas para los acentos, bordes e insignias de la interfaz.
 
 ```kotlin
 /**
  * Paleta de colores optimizada para interfaces de Android TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui.theme
 
@@ -216,17 +163,20 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 ```
 
+**Explicación:** Define 6 colores base del tema Material. `Purple80`/`PurpleGrey80`/`Pink80` se usan en modo oscuro (el modo por defecto en TV). `Purple40`/`PurpleGrey40`/`Pink40` se usan en modo claro.
+
 ---
 
-## 5. Archivo 3: `Type.kt` — Tipografía para Pantallas Grandes
+## 4. Archivo 2: `Type.kt` — Tipografía
 
 **Ruta:** `tv/src/main/java/com/pmlp/tv/ui/theme/Type.kt`
-
-**¿Qué hace?** Define las escalas tipográficas adaptadas a la experiencia de visualización a 3 metros de distancia (10-foot UI).
 
 ```kotlin
 /**
  * Configuracion de tipografia y escalas de texto para pantallas de Android TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui.theme
 
@@ -266,22 +216,76 @@ val Typography = Typography(
 )
 ```
 
+**Explicación:** Configura el estilo tipográfico base (`bodyLarge`) con fuente de 16sp. Los demás estilos (`displayMedium`, `headlineSmall`, etc.) usados en `TVHomeScreen` heredan los valores predeterminados del Material 3 para TV.
+
 ---
 
-## 6. Archivo 4: `MainActivitytv.kt` — Actividad Principal y Reproductor de Audio
+## 5. Archivo 3: `Theme.kt` — Tema Visual TV
+
+**Ruta:** `tv/src/main/java/com/pmlp/tv/ui/theme/Theme.kt`
+
+```kotlin
+/**
+ * Configuracion del tema de Compose para Android TV (androidx.tv.material3).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
+ */
+package com.pmlp.tv.ui.theme
+
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.darkColorScheme
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+/**
+ * Metodo principal que ejecuta la operacion: EdutaskTheme.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
+fun EdutaskTheme(
+    isInDarkTheme: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val colorScheme = darkColorScheme(
+        primary = Purple80,
+        secondary = PurpleGrey80,
+        tertiary = Pink80,
+        background = Color(0xFF0E0B16),
+        surface = Color(0xFF1B1528),
+        surfaceVariant = Color(0xFF28203B),
+        onBackground = Color(0xFFF4EFF4),
+        onSurface = Color(0xFFF4EFF4),
+        onSurfaceVariant = Color(0xFFCAC4D0)
+    )
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
+}
+```
+
+**Explicación:** Provee el tema global para toda la interfaz de TV. Si el sistema está en modo oscuro usa `darkColorScheme` con la paleta púrpura; si está en modo claro usa `lightColorScheme`. En la práctica, Android TV siempre usa modo oscuro.
+
+---
+
+## 6. Archivo 4: `MainActivitytv.kt` — Actividad Principal y Reproductor
 
 **Ruta:** `tv/src/main/java/com/pmlp/tv/MainActivitytv.kt`
-
-**¿Qué hace?**
-- Configura la ventana a pantalla completa.
-- Inicializa `ExoPlayer` con el recurso de audio `res/raw/himno` en modo `REPEAT_MODE_ALL`.
-- Instancia el `EventosSharedViewModel` y carga `TVHomeScreen`.
-- Libera adecuadamente el reproductor en `onDestroy()`.
 
 ```kotlin
 /**
  * Actividad principal para Android TV que configura la visualizacion en pantalla grande
  * e inicializa la interfaz del tablon inteligente (TVHomeScreen).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv
 
@@ -314,6 +318,11 @@ class MainActivitytv : ComponentActivity() {
     private var exoPlayer: ExoPlayer? = null
 
     @OptIn(ExperimentalTvMaterial3Api::class)
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -332,6 +341,12 @@ class MainActivitytv : ComponentActivity() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: initializePlayer.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun initializePlayer() {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(this).build()
@@ -352,6 +367,11 @@ class MainActivitytv : ComponentActivity() {
         }
     }
 
+    /**
+     * Manejador de evento para la accion onDestroy.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onDestroy() {
         super.onDestroy()
         exoPlayer?.stop()
@@ -362,28 +382,38 @@ class MainActivitytv : ComponentActivity() {
 }
 ```
 
+**Explicación paso a paso:**
+
+- **Línea 32:** `MainActivitytv` es la Activity principal del módulo TV, registrada en el AndroidManifest.
+- **Línea 33:** Declara una referencia al reproductor de audio `ExoPlayer`.
+- **Línea 39:** `initializePlayer()` prepara el himno institucional (`res/raw/himno`) para reproducirse en bucle infinito como música ambiente.
+- **Líneas 41-51:** Configura Compose:
+  1. Crea el `EventosSharedViewModel` con `viewModel()`.
+  2. Envuelve todo en `EdutaskTheme`.
+  3. Usa una `Surface` a pantalla completa con forma rectangular.
+  4. Renderiza `TVHomeScreen(viewModel)`.
+- **Líneas 54-71:** `initializePlayer()`:
+  - Crea el `ExoPlayer` si no existe.
+  - Carga el archivo de audio desde recursos.
+  - Configura repetición infinita (`REPEAT_MODE_ALL`).
+  - Inicia la reproducción.
+- **Líneas 74-80:** `onDestroy()` libera correctamente los recursos del reproductor.
+
 ---
 
-## 7. Archivo 5: `TVHomeScreen.kt` — Carrusel y Dashboard con Gráfica de Barras
+## 7. Archivo 5: `TVHomeScreen.kt` — Pantalla Principal con Carrusel y Dashboard
 
 **Ruta:** `tv/src/main/java/com/pmlp/tv/ui/TVHomeScreen.kt`
 
-**¿Qué hace?** Es el componente central del módulo TV. Contiene:
-- **`sealed class CarouselPage`**: Unifica noticias (`EventoPage`) y grupos (`GrupoPage`).
-- **`TVHomeScreen`**: Observa el estado de Firestore y gestiona estados de carga, error y contenido.
-- **`AutoCarousel`**: Paginador horizontal con animación automática cada 6 segundos.
-- **`EventoHeroCard`**: Tarjeta inmersiva de eventos con imagen, degradados y badges informativos.
-- **`GrupoEstadisticaCard`**: Tarjeta de estadísticas de alto contraste en 2 columnas:
-  - **Columna Izquierda:** Badge de rendimiento (`ESTADISTICAS • EXCELENTE / BUENO / REGULAR`), nombre del grupo en gran formato, cuadro Hero con el promedio general (`64sp`) sobre 10.0, y métricas de alumnos inscritos/evaluados con barra de avance porcentual.
-  - **Columna Derecha:** Gráfica de barras por tarea con tarjetas individuales (`BarRow`), insignias numéricas (`#1`, `#2`...), nombre de actividad, barra de progreso con gradiente y badge con la calificación.
-- **`BarRow`**: Fila estilizada para cada tarea con cálculo proporcional sobre 10 (`score / 10.0`).
-- **`PaginationIndicator`**: Indicador con círculos `●` para noticias y cuadrados `◻` para grupos.
-- **Cero emojis:** Todo el diseño utiliza badges y formas vectoriales nativas de Compose.
+Este es el archivo más extenso del módulo TV. Contiene el carrusel automático de noticias y las tarjetas de estadísticas por grupo con gráficas de barras.
 
 ```kotlin
 /**
  * Pantalla principal para Android TV con carrusel automatizado de avisos institucionales
  * y tarjetas de monitoreo academico en tiempo real con graficas de barras por grupo.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui
 
@@ -456,6 +486,12 @@ sealed class CarouselPage {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla TVHomeScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun TVHomeScreen(viewModel: EventosSharedViewModel) {
     EdutaskTheme {
         val uiState          by viewModel.uiState.collectAsStateWithLifecycle()
@@ -499,6 +535,12 @@ fun TVHomeScreen(viewModel: EventosSharedViewModel) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: CenteredMsg.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun CenteredMsg(msg: String, color: Color) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(msg, color = color, fontSize = 24.sp)
@@ -510,6 +552,12 @@ private fun CenteredMsg(msg: String, color: Color) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: AutoCarousel.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AutoCarousel(pages: List<CarouselPage>) {
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
@@ -551,6 +599,11 @@ fun AutoCarousel(pages: List<CarouselPage>) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EventoHeroCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoHeroCard(evento: Evento) {
     val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     val dateString = formatter.format(Date(evento.fechaPublicacion))
@@ -618,6 +671,11 @@ fun EventoHeroCard(evento: Evento) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar GrupoEstadisticaCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun GrupoEstadisticaCard(grupo: EstadisticaGrupo) {
     val pg            = grupo.promedioGeneral
     val promColor     = pg.calColor()
@@ -870,6 +928,12 @@ fun GrupoEstadisticaCard(grupo: EstadisticaGrupo) {
 // Fila de barra horizontal por tarea
 // ---------------------------------------------------------------------------
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: BarRow.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun BarRow(index: Int, materia: PromedioMateria) {
     val score = materia.promedio ?: 0.0
     val barColor = materia.promedio.calColor()
@@ -968,6 +1032,12 @@ private fun BarRow(index: Int, materia: PromedioMateria) {
 // Fila de estadistica resumen (etiqueta + valor)
 // ---------------------------------------------------------------------------
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: StatRow.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun StatRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -992,6 +1062,12 @@ private fun StatRow(label: String, value: String) {
 // Badge reutilizable
 // ---------------------------------------------------------------------------
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: InfoBadge.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun InfoBadge(text: String) {
     Box(
         modifier = Modifier
@@ -1012,6 +1088,12 @@ private fun InfoBadge(text: String) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PaginationIndicator.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun PaginationIndicator(count: Int, currentIndex: Int, isGrupo: (Int) -> Boolean = { false }) {
     if (count <= 12) {
         Row(
@@ -1055,19 +1137,76 @@ fun PaginationIndicator(count: Int, currentIndex: Int, isGrupo: (Int) -> Boolean
 }
 ```
 
+**Explicación detallada por sección:**
+
+### Constantes de color (líneas ~44-54)
+- `CalifAlta = Color.White`: Promedios ≥ 8.0 se muestran en blanco puro.
+- `CalifMedia = Color(0xFFFFB74D)`: Promedios ≥ 6.0 en ámbar.
+- `CalifBaja = Color(0xFFCF6679)`: Promedios < 6.0 en rosa/rojo.
+- `CalifSinDatos = Color(0xFF9E9E9E)`: Sin datos en gris.
+
+### `sealed class CarouselPage` (líneas ~57-60)
+Tipos sellados que unifican las noticias y los grupos en un solo carrusel:
+- `EventoPage(evento)`: Una diapositiva de noticia.
+- `GrupoPage(grupo)`: Una diapositiva de estadísticas de grupo.
+
+### `TVHomeScreen()` (líneas ~66-115)
+1. Observa `uiState` y `estadisticasState` con `collectAsStateWithLifecycle`.
+2. Construye la lista `pages` combinando eventos + grupos.
+3. Renderiza estados de carga, error o vacío según corresponda.
+4. Si hay páginas, muestra `AutoCarousel(pages)`.
+
+### `AutoCarousel()` (líneas ~120-150)
+1. Crea un `HorizontalPager` con todas las páginas.
+2. Un `LaunchedEffect` avanza automáticamente cada 6,000 milisegundos.
+3. Cada página se renderiza como `EventoHeroCard` o `GrupoEstadisticaCard` según su tipo.
+4. Al final muestra el `PaginationIndicator`.
+
+### `EventoHeroCard()` (líneas ~155-227)
+Tarjeta de noticia institucional a pantalla completa:
+1. Decodifica imagen (Base64 o URL) con `AsyncImage` de Coil.
+2. Aplica un gradiente negro inferior para que el texto sea legible sobre la imagen.
+3. Muestra título (`displayMedium`), descripción (`headlineSmall`), lugar y fecha.
+
+### `GrupoEstadisticaCard()` (líneas ~232-390)
+Tarjeta de estadísticas de un grupo, dividida en 2 columnas:
+- **Columna izquierda (260dp):**
+  - Etiqueta de categoría (`"ESTADISTICAS • Excelente"`)
+  - Nombre del grupo (`displaySmall`)
+  - Promedio general gigante (80sp)
+  - Tabla resumen: alumnos inscritos, calificados y tareas
+  - Barra de progreso de avance de calificación
+- **Columna derecha:**
+  - Título "Promedio por tarea"
+  - Hasta 7 barras horizontales (`BarRow`)
+
+### `BarRow()` (líneas ~395-440)
+Barra horizontal proporcional de calificación:
+- Calcula la fracción `promedio / 10.0` para determinar el ancho.
+- Nombre de la tarea (150dp fijo), barra con gradiente, valor numérico y total calificados.
+
+### `PaginationIndicator()` (líneas ~470-520)
+- Si hay ≤ 12 páginas: muestra puntos individuales.
+  - Círculos `●` para noticias.
+  - Cuadrados `◻` para grupos.
+  - El punto activo es más grande (18dp vs 10dp) y animado.
+- Si hay > 12 páginas: muestra un badge de texto `"Grupo X de N"`.
+
 ---
 
-## 8. Módulo Core: EventosSharedViewModel y Modelos de Datos
+## 8. Dependencia: `EventosSharedViewModel.kt` (módulo Core)
 
-### `EventosSharedViewModel.kt`
 **Ruta:** `core/src/main/java/com/pmlp/edutask/ui/EventosSharedViewModel.kt`
 
-Contiene el listener en tiempo real sobre `evidencias_tarea` y el algoritmo de agregación en 7 pasos (`calcularEstadisticas()`) que computa los promedios por materia y general de cada grupo.
+Este ViewModel es compartido entre los módulos `:app` (coordinador) y `:tv`. Contiene toda la lógica de conexión con Firestore.
 
 ```kotlin
 /**
  * ViewModel compartido entre modulos que sincroniza en tiempo real los eventos escolares
  * y recalcula los promedios y metricas de grupos para el modulo de TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui
 
@@ -1116,6 +1255,11 @@ class EventosSharedViewModel : ViewModel() {
         fetchEstadisticasInstitucionales()
     }
 
+    /**
+     * Obtiene o recupera datos asociados a fetchEventos desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun fetchEventos() {
         Log.d("FIRESTORE_DEBUG", "Iniciando listener a la coleccion 'eventos_escolares'...")
         _uiState.value = EventosUiState.Loading
@@ -1217,6 +1361,12 @@ class EventosSharedViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: calcularEstadisticas.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private suspend fun calcularEstadisticas() {
         // 1. Obtener todas las clases
         val clasesSnap = db.collection("clases").get().await()
@@ -1347,11 +1497,21 @@ class EventosSharedViewModel : ViewModel() {
         Log.d("ESTADISTICAS_TV", "Estadísticas actualizadas: ${grupos.size} grupos procesados")
     }
 
+    /**
+     * Manejador de evento para la accion onCleared.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCleared() {
         super.onCleared()
         evidenciasListener?.remove()
     }
 
+    /**
+     * Guarda o actualiza los datos de saveEvento en la base de datos.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun saveEvento(evento: Evento, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -1376,6 +1536,11 @@ class EventosSharedViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Elimina el registro correspondiente a deleteEvento del sistema.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun deleteEvento(idEvento: String) {
         viewModelScope.launch {
             try {
@@ -1389,8 +1554,34 @@ class EventosSharedViewModel : ViewModel() {
 }
 ```
 
+**Explicación de las funciones principales:**
+
+### `fetchEventos()` (líneas 52-121)
+Establece un `addSnapshotListener` en tiempo real sobre `eventos_escolares`:
+- Parsea el campo `fechaEvento` que puede venir como `Timestamp`, `String` (ISO-8601), `Number` (epoch millis) o `Map` (exportación JSON con `_seconds`).
+- Construye objetos `Evento` y actualiza `_uiState`.
+
+### `fetchEstadisticasInstitucionales()` (líneas 127-151)
+Establece un listener sobre **toda** la colección `evidencias_tarea`. Cada vez que cualquier documento cambia (un profesor califica), lanza `calcularEstadisticas()`.
+
+### `calcularEstadisticas()` (líneas 153-281)
+Algoritmo de agregación en 7 pasos:
+1. Obtiene todas las clases del sistema.
+2. Para cada clase, cuenta los alumnos inscritos (`clase_alumno`).
+3. Obtiene las tareas de la clase.
+4. Obtiene las asignaciones con `whereIn` chunkeado a 10 (límite de Firestore).
+5. Obtiene las evidencias calificadas y extrae las notas.
+6. Calcula el promedio por tarea.
+7. Calcula el promedio general y los alumnos con al menos una calificación.
+
+### `saveEvento()` y `deleteEvento()` (líneas 288-321)
+CRUD para eventos institucionales, usado por el módulo del coordinador.
+
+---
+
+## Modelos de Datos Compartidos (módulo Core)
+
 ### `EstadisticaGrupo.kt`
-**Ruta:** `core/src/main/java/com/pmlp/edutask/model/EstadisticaGrupo.kt`
 
 ```kotlin
 /**
@@ -1425,7 +1616,6 @@ data class PromedioMateria(
 ```
 
 ### `Evento.kt`
-**Ruta:** `core/src/main/java/com/pmlp/edutask/model/Evento.kt`
 
 ```kotlin
 /**
@@ -1445,7 +1635,6 @@ data class Evento(
 ```
 
 ### `Calificacion.kt`
-**Ruta:** `core/src/main/java/com/pmlp/edutask/model/Calificacion.kt`
 
 ```kotlin
 /**
@@ -1468,12 +1657,12 @@ data class Calificacion(
 
 ---
 
-## 9. Guía de Compilación y Ejecución
+## Guía de Compilación y Ejecución
 
 ```bash
-# Compilar APK de depuración para Android TV
+# Compilar el APK de depuración
 ./gradlew :tv:assembleDebug
 
-# Instalar en emulador o dispositivo Smart TV conectado por ADB
+# Instalar en emulador o TV con ADB
 adb install tv/build/outputs/apk/debug/tv-debug.apk
 ```

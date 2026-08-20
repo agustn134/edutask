@@ -1,5 +1,8 @@
 /**
  * ViewModel para Wear OS que procesa la calificacion de evidencias y actualiza Firestore.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -44,6 +47,12 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
     // ── Cargar evidencias pendientes ─────────────────────────────────────────
     init { cargarPendientes() }
 
+    /**
+     * Metodo principal que ejecuta la operacion: cargarPendientes.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun cargarPendientes() {
         viewModelScope.launch {
             _uiState.value = CalificarUiState.Cargando
@@ -139,6 +148,12 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ── Guardar calificación ─────────────────────────────────────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: calificar.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun calificar(idEvidencia: String, nota: Int, onDone: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = CalificarUiState.Cargando
@@ -177,5 +192,11 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: resetEstado.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun resetEstado() { _uiState.value = CalificarUiState.Idle }
 }

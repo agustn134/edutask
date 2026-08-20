@@ -1,6 +1,9 @@
 /**
  * Pestana de tareas del alumno que organiza y filtra las tareas por estado
  * (pendientes, entregadas y calificadas) con acceso directo al detalle de cada una.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -30,6 +33,11 @@ import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente interno que renderiza el contenido de TareasContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (String) -> Unit,
                   tareas: List<TareaItem>, pendienteCount: Int, clases: List<String>,
                   isRefreshing: Boolean, onRefresh: () -> Unit,
@@ -175,6 +183,11 @@ fun TareasContent(modifier: Modifier, claseSelected: String?, onClaseSelected: (
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar TareaCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false, onClick: () -> Unit = {}) {
     val fmt = SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault())
     ElevatedCard(
@@ -249,6 +262,12 @@ fun TareaCard(tarea: Tarea, estado: EstadoEvidencia, isVencida: Boolean = false,
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EstadoChip.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EstadoChip(estado: EstadoEvidencia) {
     val label = when (estado) { EstadoEvidencia.Pendiente -> "Pend."; EstadoEvidencia.Aprobada -> "Aprob."; EstadoEvidencia.Rechazada -> "Rec." }
     val icon  = when (estado) { EstadoEvidencia.Pendiente -> Icons.Default.Schedule; EstadoEvidencia.Aprobada -> Icons.Default.CheckCircle; EstadoEvidencia.Rechazada -> Icons.Default.Cancel }
@@ -261,6 +280,11 @@ fun EstadoChip(estado: EstadoEvidencia) {
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ClaseGridItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ClaseGridItem(nombre: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     ElevatedCard(
         onClick = onClick,

@@ -1,5 +1,8 @@
 /**
  * Configuracion de estilos tipograficos (Typography) para la aplicacion movil EduTask.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.theme
 

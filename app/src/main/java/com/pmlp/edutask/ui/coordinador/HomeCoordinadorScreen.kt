@@ -1,6 +1,9 @@
 /**
  * Pantalla principal del rol Coordinador con acceso a la gestion de eventos institucionales,
  * administracion de usuarios y metricas del sistema.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -25,6 +28,12 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla HomeCoordinadorScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun HomeCoordinadorScreen(
     idUsuario: String,
     nombreCoordinador: String,
@@ -119,6 +128,11 @@ fun HomeCoordinadorScreen(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar CoordinadorCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CoordinadorCard(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
     Card(
         modifier = Modifier

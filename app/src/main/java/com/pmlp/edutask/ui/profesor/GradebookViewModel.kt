@@ -1,6 +1,9 @@
 /**
  * ViewModel que calcula de forma reactiva las calificaciones y promedios generales
  * por alumno, grupo y tarea para la vista de Gradebook.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -37,6 +40,11 @@ class GradebookViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(GradebookState())
     val uiState: StateFlow<GradebookState> = _uiState
 
+    /**
+     * Obtiene o recupera datos asociados a loadGradebook desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun loadGradebook(idClase: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -164,6 +172,12 @@ class GradebookViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: exportarAExcel.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun exportarAExcel(context: Context): Uri? {
         val state = _uiState.value
         if (state.alumnos.isEmpty() || state.tareas.isEmpty()) return null

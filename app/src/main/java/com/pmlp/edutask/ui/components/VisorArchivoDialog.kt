@@ -1,6 +1,9 @@
 /**
  * Dialogo modal reutilizable para previsualizar archivos, documentos e imagenes adjuntas
  * directamente dentro de la aplicacion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.components
 
@@ -31,6 +34,12 @@ import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: VisorArchivoDialog.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun VisorArchivoDialog(
     base64String: String,
     nombreArchivo: String,

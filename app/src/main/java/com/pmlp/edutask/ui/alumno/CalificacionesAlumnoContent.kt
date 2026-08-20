@@ -1,6 +1,9 @@
 /**
  * Componente de interfaz para la consulta de calificaciones del alumno.
  * Muestra el listado de materias, promedios acumulados y desglose de notas por tarea.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -30,6 +33,11 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente interno que renderiza el contenido de CalificacionesContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CalificacionesContent(
     modifier: Modifier = Modifier, 
     tareas: List<TareaItem>, 
@@ -74,6 +82,11 @@ fun CalificacionesContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ClaseGradesAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, promedio: Double?, onVerTarea: (TareaItem) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     
@@ -155,6 +168,11 @@ fun ClaseGradesAccordion(nombreClase: String, tareas: List<TareaItem>, promedio:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar CalificacionCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CalificacionCard(item: TareaItem, onClick: (TareaItem) -> Unit) {
     val calificacionStr = item.calificacion?.toString() ?: "-"
     

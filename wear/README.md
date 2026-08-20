@@ -160,6 +160,9 @@ dependencies {
 ```kotlin
 /**
  * Configuracion del tema visual de Compose para Wear OS optimizado para pantallas circulares/rectangulares.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation.theme
 
@@ -167,6 +170,12 @@ import androidx.compose.runtime.Composable
 import androidx.wear.compose.material3.MaterialTheme
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EdutaskTheme.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EdutaskTheme(
     content: @Composable () -> Unit
 ) {
@@ -199,6 +208,9 @@ fun EdutaskTheme(
 ```kotlin
 /**
  * ViewModel para Wear OS que procesa la calificacion de evidencias y actualiza Firestore.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -243,6 +255,12 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
     // ── Cargar evidencias pendientes ─────────────────────────────────────────
     init { cargarPendientes() }
 
+    /**
+     * Metodo principal que ejecuta la operacion: cargarPendientes.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun cargarPendientes() {
         viewModelScope.launch {
             _uiState.value = CalificarUiState.Cargando
@@ -338,6 +356,12 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ── Guardar calificación ─────────────────────────────────────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: calificar.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun calificar(idEvidencia: String, nota: Int, onDone: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = CalificarUiState.Cargando
@@ -376,6 +400,12 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: resetEstado.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun resetEstado() { _uiState.value = CalificarUiState.Idle }
 }
 ```
@@ -432,6 +462,9 @@ Realiza una **consulta relacional en cadena** a Firestore:
 ```kotlin
 /**
  * Actividad principal para Wear OS que configura la navegacion y flujo en smartwatches.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -473,6 +506,11 @@ import kotlinx.coroutines.tasks.await
 import com.pmlp.wear.presentation.theme.EdutaskTheme
 
 class MainActivity : ComponentActivity() {
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -514,6 +552,12 @@ private sealed class WearDestino {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EduTaskWearApp.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EduTaskWearApp() {
     val vm: CalificarViewModel = viewModel()
     val uiState by vm.uiState.collectAsState()
@@ -738,6 +782,12 @@ fun EduTaskWearApp() {
 }
 
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla NuevaEntregaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun NuevaEntregaScreen(
     nombreAlumno: String,
     tituloTarea: String,
@@ -833,6 +883,12 @@ fun NuevaEntregaScreen(
 }
 
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla VerFotoScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
     var currentIndex by remember { mutableStateOf(0) }
     val foto = remember(fotos, currentIndex) { fotos.getOrNull(currentIndex) ?: "" }
@@ -939,6 +995,11 @@ fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
     }
 }
 
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     return try {
         val cleanString = if (base64Str.contains(",")) {
@@ -1005,6 +1066,9 @@ Convierte una cadena Base64 (con o sin prefijo `data:image/...;base64,`) en un o
 ```kotlin
 /**
  * Pantalla para Wear OS que lista las tareas y evidencias pendientes de calificar.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -1026,6 +1090,12 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 
 // ── Lista de evidencias pendientes ───────────────────────────────────────────
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla PendientesScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun PendientesScreen(
     nombreProfesor:    String,
     items:             List<EvidenciaPendiente>,
@@ -1145,6 +1215,12 @@ fun PendientesScreen(
 // ── Preview ──────────────────────────────────────────────────────────────────
 @WearPreviewDevices
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewPendientes.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewPendientes() {
     val mocks = listOf(
         EvidenciaPendiente("1", "María López",  "Ensayo Revolución"),
@@ -1178,6 +1254,9 @@ private fun PreviewPendientes() {
 /**
  * Pantalla para Wear OS que permite al profesor calificar evidencias de tareas de forma rapida
  * directamente desde el reloj inteligente.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -1195,6 +1274,12 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 
 // ── Pantalla de calificación rápida ──────────────────────────────────────────
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla CalificarScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CalificarScreen(
     evidencia:   EvidenciaPendiente,
     esCargando:  Boolean,
@@ -1320,6 +1405,12 @@ fun CalificarScreen(
 
 // ── Botón de calificación grande ─────────────────────────────────────────────
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: BotonNota.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun BotonNota(
     label:    String,
     colors:   ButtonColors,
@@ -1342,6 +1433,12 @@ private fun BotonNota(
 
 // ── Paso de confirmación ──────────────────────────────────────────────────────
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: ConfirmacionCalificacion.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ConfirmacionCalificacion(
     nota:       Int,
     onConfirmar: () -> Unit,
@@ -1389,6 +1486,12 @@ private fun ConfirmacionCalificacion(
 // ── Preview ───────────────────────────────────────────────────────────────────
 @WearPreviewDevices
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewCalificar.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewCalificar() {
     CalificarScreen(
         evidencia   = EvidenciaPendiente("1", "María López", "Ensayo Revolución"),
@@ -1428,6 +1531,9 @@ Botón reutilizable de 44dp de altura con texto en negrita centrado. Recibe colo
 ```kotlin
 /**
  * Servicio en segundo plano para Wear OS que escucha y sincroniza la sesion del profesor con la app movil.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -1439,6 +1545,11 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 
 class SessionListenerService : WearableListenerService() {
+    /**
+     * Manejador de evento para la accion onDataChanged.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d("SessionListenerService", "Data changed event received on wear")
         for (event in dataEvents) {
@@ -1478,6 +1589,9 @@ class SessionListenerService : WearableListenerService() {
 ```kotlin
 /**
  * Servicio de notificaciones en Wear OS que alerta al profesor sobre nuevas evidencias recibidas.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -1509,8 +1623,18 @@ class TaskNotificationService : Service() {
     private var isFirstLoad = true
     private var prefListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
+    /**
+     * Manejador de evento para la accion onBind.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate() {
         super.onCreate()
         Log.d("TaskNotificationService", "Service created")
@@ -1518,6 +1642,12 @@ class TaskNotificationService : Service() {
         startListening()
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: createNotificationChannel.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -1532,6 +1662,12 @@ class TaskNotificationService : Service() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: startListening.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun startListening() {
         val prefs = getSharedPreferences("edutask_wear_prefs", Context.MODE_PRIVATE)
         val idProfesor = prefs.getString("idUsuario", "profesor_001") ?: "profesor_001"
@@ -1609,6 +1745,12 @@ class TaskNotificationService : Service() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: showNotification.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun showNotification(alumno: String, tarea: String, tieneArchivosNoImagen: Boolean) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -1639,6 +1781,11 @@ class TaskNotificationService : Service() {
         Log.d("TaskNotificationService", "Notification posted: $alumno - $contentText")
     }
 
+    /**
+     * Manejador de evento para la accion onDestroy.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onDestroy() {
         super.onDestroy()
         listener?.remove()

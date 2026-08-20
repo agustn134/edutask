@@ -1,5 +1,8 @@
 /**
  * Servicio en segundo plano para Wear OS que escucha y sincroniza la sesion del profesor con la app movil.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -11,6 +14,11 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 
 class SessionListenerService : WearableListenerService() {
+    /**
+     * Manejador de evento para la accion onDataChanged.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d("SessionListenerService", "Data changed event received on wear")
         for (event in dataEvents) {

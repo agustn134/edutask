@@ -1,6 +1,9 @@
 /**
  * Componente reutilizable de interfaz que renderiza ilustraciones y mensajes informativos
  * cuando una lista o seccion no cuenta con datos para mostrar.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.components
 
@@ -18,6 +21,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EmptyStateIllustration.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EmptyStateIllustration(
     icon: ImageVector,
     title: String,

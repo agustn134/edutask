@@ -1,5 +1,8 @@
 /**
  * Actividad principal para Wear OS que configura la navegacion y flujo en smartwatches.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -41,6 +44,11 @@ import kotlinx.coroutines.tasks.await
 import com.pmlp.wear.presentation.theme.EdutaskTheme
 
 class MainActivity : ComponentActivity() {
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -82,6 +90,12 @@ private sealed class WearDestino {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EduTaskWearApp.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EduTaskWearApp() {
     val vm: CalificarViewModel = viewModel()
     val uiState by vm.uiState.collectAsState()
@@ -306,6 +320,12 @@ fun EduTaskWearApp() {
 }
 
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla NuevaEntregaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun NuevaEntregaScreen(
     nombreAlumno: String,
     tituloTarea: String,
@@ -401,6 +421,12 @@ fun NuevaEntregaScreen(
 }
 
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla VerFotoScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
     var currentIndex by remember { mutableStateOf(0) }
     val foto = remember(fotos, currentIndex) { fotos.getOrNull(currentIndex) ?: "" }
@@ -507,6 +533,11 @@ fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
     }
 }
 
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     return try {
         val cleanString = if (base64Str.contains(",")) {

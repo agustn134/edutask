@@ -1,5 +1,8 @@
 /**
  * Paleta de colores optimizada para interfaces de Android TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui.theme
 

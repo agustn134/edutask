@@ -1,5 +1,8 @@
 /**
  * Servicio de notificaciones en Wear OS que alerta al profesor sobre nuevas evidencias recibidas.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -31,8 +34,18 @@ class TaskNotificationService : Service() {
     private var isFirstLoad = true
     private var prefListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
+    /**
+     * Manejador de evento para la accion onBind.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate() {
         super.onCreate()
         Log.d("TaskNotificationService", "Service created")
@@ -40,6 +53,12 @@ class TaskNotificationService : Service() {
         startListening()
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: createNotificationChannel.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -54,6 +73,12 @@ class TaskNotificationService : Service() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: startListening.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun startListening() {
         val prefs = getSharedPreferences("edutask_wear_prefs", Context.MODE_PRIVATE)
         val idProfesor = prefs.getString("idUsuario", "profesor_001") ?: "profesor_001"
@@ -131,6 +156,12 @@ class TaskNotificationService : Service() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: showNotification.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun showNotification(alumno: String, tarea: String, tieneArchivosNoImagen: Boolean) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -161,6 +192,11 @@ class TaskNotificationService : Service() {
         Log.d("TaskNotificationService", "Notification posted: $alumno - $contentText")
     }
 
+    /**
+     * Manejador de evento para la accion onDestroy.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onDestroy() {
         super.onDestroy()
         listener?.remove()

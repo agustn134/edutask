@@ -1,6 +1,9 @@
 /**
  * Pantalla principal para Android TV con carrusel automatizado de avisos institucionales
  * y tarjetas de monitoreo academico en tiempo real con graficas de barras por grupo.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui
 
@@ -73,6 +76,12 @@ sealed class CarouselPage {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla TVHomeScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun TVHomeScreen(viewModel: EventosSharedViewModel) {
     EdutaskTheme {
         val uiState          by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,6 +125,12 @@ fun TVHomeScreen(viewModel: EventosSharedViewModel) {
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: CenteredMsg.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun CenteredMsg(msg: String, color: Color) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(msg, color = color, fontSize = 24.sp)
@@ -127,6 +142,12 @@ private fun CenteredMsg(msg: String, color: Color) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: AutoCarousel.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AutoCarousel(pages: List<CarouselPage>) {
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
@@ -168,6 +189,11 @@ fun AutoCarousel(pages: List<CarouselPage>) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EventoHeroCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoHeroCard(evento: Evento) {
     val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     val dateString = formatter.format(Date(evento.fechaPublicacion))
@@ -235,6 +261,11 @@ fun EventoHeroCard(evento: Evento) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar GrupoEstadisticaCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun GrupoEstadisticaCard(grupo: EstadisticaGrupo) {
     val pg            = grupo.promedioGeneral
     val promColor     = pg.calColor()
@@ -487,6 +518,12 @@ fun GrupoEstadisticaCard(grupo: EstadisticaGrupo) {
 // Fila de barra horizontal por tarea
 // ---------------------------------------------------------------------------
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: BarRow.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun BarRow(index: Int, materia: PromedioMateria) {
     val score = materia.promedio ?: 0.0
     val barColor = materia.promedio.calColor()
@@ -585,6 +622,12 @@ private fun BarRow(index: Int, materia: PromedioMateria) {
 // Fila de estadistica resumen (etiqueta + valor)
 // ---------------------------------------------------------------------------
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: StatRow.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun StatRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -609,6 +652,12 @@ private fun StatRow(label: String, value: String) {
 // Badge reutilizable
 // ---------------------------------------------------------------------------
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: InfoBadge.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun InfoBadge(text: String) {
     Box(
         modifier = Modifier
@@ -629,6 +678,12 @@ private fun InfoBadge(text: String) {
 // ---------------------------------------------------------------------------
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PaginationIndicator.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun PaginationIndicator(count: Int, currentIndex: Int, isGrupo: (Int) -> Boolean = { false }) {
     if (count <= 12) {
         Row(

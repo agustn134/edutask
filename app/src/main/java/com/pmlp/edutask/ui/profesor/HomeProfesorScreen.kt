@@ -1,6 +1,9 @@
 /**
  * Pantalla principal del rol Profesor que administra las clases activas, tareas asignadas,
  * revisiones pendientes y sincronizacion con dispositivos Wear OS.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -77,6 +80,12 @@ private val PROF_NAV = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla HomeProfesorScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun HomeProfesorScreen(
     idUsuario: String        = "",
     nombreProfesor: String   = "Mtro. Perez",
@@ -620,6 +629,11 @@ fun HomeProfesorScreen(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de InicioContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun InicioContent(
     pendientes: Int,
     claseActual: String,
@@ -764,6 +778,11 @@ private fun InicioContent(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de TareasContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun TareasContent(
     tareas: List<Tarea>,
     clases: List<ClaseInfo>,
@@ -879,6 +898,11 @@ private fun TareasContent(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de ClasesContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ClasesContent(
     clases: List<ClaseInfo>,
     inscripciones: Map<String, List<String>>,
@@ -956,6 +980,11 @@ private fun ClasesContent(
 }
 
 @Composable
+/**
+ * Componente interno que renderiza el contenido de PerfilContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PerfilContent(
     nombre: String,
     clasesCount: Int,
@@ -1059,6 +1088,11 @@ private fun PerfilContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente visual reutilizable para renderizar AjustesCuentaAccordion.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AjustesCuentaAccordion(
     correoActual: String = "",
     onGuardarCambios: (String, String) -> Unit
@@ -1166,6 +1200,11 @@ fun AjustesCuentaAccordion(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar StatCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun StatCard(title: String, value: String, icon: ImageVector, color: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
@@ -1185,6 +1224,11 @@ private fun StatCard(title: String, value: String, icon: ImageVector, color: and
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar ShortcutItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ShortcutItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit = {}) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1213,6 +1257,11 @@ private fun ShortcutItem(icon: ImageVector, title: String, subtitle: String, onC
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EvidenciaListItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EvidenciaListItem(
     evidencia: EvidenciaTarea,
     onVerClick: (EvidenciaTarea) -> Unit
@@ -1241,6 +1290,11 @@ fun EvidenciaListItem(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar AccesoRapidoCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier) {
     ElevatedCard(modifier = modifier,
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)) {
@@ -1257,12 +1311,24 @@ private fun AccesoRapidoCard(acceso: AccesoRapido, modifier: Modifier = Modifier
     }
 }
 
+/**
+ * Metodo principal que ejecuta la operacion: generateShortCode.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun generateShortCode(): String {
     val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     return (1..6).map { chars.random() }.joinToString("")
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EventoCarouselCardProfesor.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoCarouselCardProfesor(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))
@@ -1304,6 +1370,12 @@ fun EventoCarouselCardProfesor(evento: Evento) {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: InicioSkeleton.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun InicioSkeleton() {
     Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
@@ -1353,6 +1425,12 @@ private fun InicioSkeleton() {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: TareasSkeleton.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun TareasSkeleton() {
     Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),
@@ -1382,6 +1460,12 @@ private fun TareasSkeleton() {
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: ClasesSkeleton.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ClasesSkeleton() {
     Column(
         modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(16.dp),

@@ -1,6 +1,9 @@
 /**
  * ViewModel del modulo de Coordinador que gestiona la creacion, edicion y eliminacion
  * de eventos institucionales y el catalogo general de usuarios.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -31,6 +34,11 @@ class CoordinadorViewModel : ViewModel() {
         fetchUsuarios()
     }
 
+    /**
+     * Obtiene o recupera datos asociados a fetchUsuarios desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun fetchUsuarios() {
         viewModelScope.launch {
             _uiState.value = CoordinadorUiState.Loading
@@ -59,6 +67,11 @@ class CoordinadorViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Guarda o actualiza los datos de saveUsuario en la base de datos.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun saveUsuario(usuario: Usuario, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -103,6 +116,11 @@ class CoordinadorViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Elimina el registro correspondiente a deleteUsuario del sistema.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun deleteUsuario(idUsuario: String) {
         viewModelScope.launch {
             try {

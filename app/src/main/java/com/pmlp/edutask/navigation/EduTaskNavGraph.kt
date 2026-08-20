@@ -2,6 +2,9 @@
  * Grafo de navegacion principal de la aplicacion movil con Jetpack Compose Navigation.
  * Define las rutas, argumentos y transiciones entre pantallas para los diferentes roles
  * (Alumno, Profesor, Coordinador y Login).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.navigation
 
@@ -48,23 +51,65 @@ object EduTaskRoutes {
     const val ESTADISTICAS_TAREA = "estadisticas_tarea/{idTarea}/{tituloTarea}"
     const val GRADEBOOK = "gradebook/{idClase}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: homeAlumno.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun homeAlumno(idUsuario: String, nombre: String, carrera: String) =
         "home_alumno/${enc(idUsuario)}/${enc(nombre)}/${enc(carrera)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: homeProfesor.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun homeProfesor(idUsuario: String, nombre: String, clase: String) =
         "home_profesor/${enc(idUsuario)}/${enc(nombre)}/${enc(clase)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: homeCoordinador.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun homeCoordinador(idUsuario: String, nombre: String) =
         "home_coordinador/${enc(idUsuario)}/${enc(nombre)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: listaUsuarios.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun listaUsuarios(filtro: String) = "lista_usuarios/${enc(filtro)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: formularioUsuario.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun formularioUsuario(idUsuario: String? = null) =
         if (idUsuario != null) "formulario_usuario?idUsuario=${enc(idUsuario)}" else "formulario_usuario"
 
+    /**
+     * Metodo principal que ejecuta la operacion: formularioEvento.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun formularioEvento(idEvento: String? = null) =
         if (idEvento != null) "formulario_evento?idEvento=${enc(idEvento)}" else "formulario_evento"
 
+    /**
+     * Metodo principal que ejecuta la operacion: enviarEvidencia.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun enviarEvidencia(
         idAsignacion: String,
         tarea:        Tarea,
@@ -75,17 +120,65 @@ object EduTaskRoutes {
         "/${enc(tarea.nombreClase)}/${enc(nombreAlumno)}" +
         if (idEvidencia != null) "?idEvidencia=${enc(idEvidencia)}" else ""
 
+    /**
+     * Metodo principal que ejecuta la operacion: crearTarea.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun crearTarea(idUsuario: String, idTarea: String? = null)  = "crear_tarea/${enc(idUsuario)}" + if (idTarea != null) "?idTarea=${enc(idTarea)}" else ""
+    /**
+     * Metodo principal que ejecuta la operacion: evaluarTarea.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun evaluarTarea(idEvidencia: String, idUsuario: String)  = "evaluar_tarea/${enc(idEvidencia)}/${enc(idUsuario)}"
+    /**
+     * Metodo principal que ejecuta la operacion: alumnosClase.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun alumnosClase(idClase: String, nombreClase: String)  = "alumnos_clase/${enc(idClase)}/${enc(nombreClase)}"
+    /**
+     * Metodo principal que ejecuta la operacion: estadisticasTarea.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun estadisticasTarea(idTarea: String, tituloTarea: String)  = "estadisticas_tarea/${enc(idTarea)}/${enc(tituloTarea)}"
+    /**
+     * Metodo principal que ejecuta la operacion: gradebook.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun gradebook(idClase: String) = "gradebook/${enc(idClase)}"
 
+    /**
+     * Metodo principal que ejecuta la operacion: enc.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun enc(s: String): String = java.net.URLEncoder.encode(s, "UTF-8")
+    /**
+     * Metodo principal que ejecuta la operacion: dec.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun dec(s: String?): String = if (s != null) java.net.URLDecoder.decode(s, "UTF-8") else ""
 }
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EduTaskNavGraph.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EduTaskNavGraph(navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = EduTaskRoutes.LOGIN) {
 

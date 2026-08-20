@@ -1,6 +1,9 @@
 /**
  * Actividad principal para Android TV que configura la visualizacion en pantalla grande
  * e inicializa la interfaz del tablon inteligente (TVHomeScreen).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv
 
@@ -33,6 +36,11 @@ class MainActivitytv : ComponentActivity() {
     private var exoPlayer: ExoPlayer? = null
 
     @OptIn(ExperimentalTvMaterial3Api::class)
+    /**
+     * Manejador de evento para la accion onCreate.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -51,6 +59,12 @@ class MainActivitytv : ComponentActivity() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: initializePlayer.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun initializePlayer() {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(this).build()
@@ -71,6 +85,11 @@ class MainActivitytv : ComponentActivity() {
         }
     }
 
+    /**
+     * Manejador de evento para la accion onDestroy.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onDestroy() {
         super.onDestroy()
         exoPlayer?.stop()

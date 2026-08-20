@@ -1,6 +1,9 @@
 /**
  * Pantalla para Wear OS que permite al profesor calificar evidencias de tareas de forma rapida
  * directamente desde el reloj inteligente.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -18,6 +21,12 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 
 // ── Pantalla de calificación rápida ──────────────────────────────────────────
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla CalificarScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CalificarScreen(
     evidencia:   EvidenciaPendiente,
     esCargando:  Boolean,
@@ -143,6 +152,12 @@ fun CalificarScreen(
 
 // ── Botón de calificación grande ─────────────────────────────────────────────
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: BotonNota.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun BotonNota(
     label:    String,
     colors:   ButtonColors,
@@ -165,6 +180,12 @@ private fun BotonNota(
 
 // ── Paso de confirmación ──────────────────────────────────────────────────────
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: ConfirmacionCalificacion.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun ConfirmacionCalificacion(
     nota:       Int,
     onConfirmar: () -> Unit,
@@ -212,6 +233,12 @@ private fun ConfirmacionCalificacion(
 // ── Preview ───────────────────────────────────────────────────────────────────
 @WearPreviewDevices
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewCalificar.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewCalificar() {
     CalificarScreen(
         evidencia   = EvidenciaPendiente("1", "María López", "Ensayo Revolución"),

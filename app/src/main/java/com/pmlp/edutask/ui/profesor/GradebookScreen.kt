@@ -1,6 +1,9 @@
 /**
  * Pantalla de libro de calificaciones (Gradebook) del profesor,
  * presentando una matriz completa de alumnos versus tareas con calculo automatico de promedios.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -29,6 +32,12 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla GradebookScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun GradebookScreen(
     idClase: String,
     viewModel: GradebookViewModel,

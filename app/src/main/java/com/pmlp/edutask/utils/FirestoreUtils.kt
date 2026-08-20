@@ -1,6 +1,9 @@
 /**
  * Funciones de utilidad y extensiones para operaciones con Firebase Firestore
  * (conversion de datos, queries seguras y manejo de colecciones).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.utils
 

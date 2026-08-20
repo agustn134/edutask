@@ -1,6 +1,9 @@
 /**
  * Pantalla para que el profesor cree o modifique asignaciones academicas,
  * definiendo instrucciones, fechas limite, ponderaciones y archivos adjuntos.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -46,6 +49,12 @@ data class ArchivoAdjunto(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla CrearTareaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun CrearTareaScreen(
     idUsuario: String = "",
     idTarea: String? = null,
@@ -600,6 +609,11 @@ fun CrearTareaScreen(
     }
 }
 
+/**
+ * Obtiene o recupera datos asociados a getFileName desde la base de datos o API.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun getFileName(context: android.content.Context, uri: Uri): String {
     var result: String? = null
     if (uri.scheme == "content") {

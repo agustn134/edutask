@@ -1,6 +1,9 @@
 /**
  * Pantalla que despliega el listado completo de eventos y noticias escolares registradas,
  * con opciones para crear, editar o eliminar publicaciones.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -28,6 +31,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla ListaEventosScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ListaEventosScreen(
     viewModel: EventosSharedViewModel,
     onBack: () -> Unit,
@@ -101,6 +110,11 @@ fun ListaEventosScreen(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EventoItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoItem(
     evento: Evento,
     onEdit: () -> Unit,

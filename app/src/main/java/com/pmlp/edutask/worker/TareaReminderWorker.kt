@@ -1,6 +1,9 @@
 /**
  * Worker en segundo plano (WorkManager) para enviar recordatorios y notificaciones
  * sobre tareas proximas a vencer a los estudiantes.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.worker
 
@@ -16,6 +19,12 @@ class TareaReminderWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
+    /**
+     * Metodo principal que ejecuta la operacion: doWork.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override suspend fun doWork(): Result {
         val tareaNombre = inputData.getString("TAREA_NOMBRE") ?: "Tarea pendiente"
         val notifId = inputData.getString("TAREA_ID")?.hashCode() ?: System.currentTimeMillis().toInt()
@@ -25,6 +34,12 @@ class TareaReminderWorker(
         return Result.success()
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: mostrarNotificacion.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun mostrarNotificacion(tareaNombre: String, notifId: Int) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 

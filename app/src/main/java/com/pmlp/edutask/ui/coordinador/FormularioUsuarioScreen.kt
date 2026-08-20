@@ -1,6 +1,9 @@
 /**
  * Pantalla con formulario para registrar o actualizar datos de usuarios (alumnos, profesores,
  * coordinadores), asignando roles y credenciales.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -21,6 +24,12 @@ import com.pmlp.edutask.model.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla FormularioUsuarioScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun FormularioUsuarioScreen(
     viewModel: CoordinadorViewModel,
     idUsuario: String?,

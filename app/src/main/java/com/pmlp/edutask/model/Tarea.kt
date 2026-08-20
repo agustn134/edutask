@@ -1,6 +1,9 @@
 /**
  * Modelo de datos representativo de una tarea escolar,
  * con titulo, descripcion, fecha de entrega, clase asociada y ponderacion.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 

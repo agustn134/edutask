@@ -2,6 +2,9 @@
  * Pantalla principal del rol Alumno.
  * Integra la barra de navegacion inferior (Bottom Navigation) y coordina las vistas de
  * Inicio, Tareas, Calificaciones y Perfil.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -55,6 +58,12 @@ private val NAV_ITEMS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla HomeAlumnoScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun HomeAlumnoScreen(
     idUsuario: String    = "",
     nombreAlumno: String = "Juan Ramirez",
@@ -291,8 +300,20 @@ fun HomeAlumnoScreen(
 
 @Preview(name = "Home Alumno Movil", showBackground = true, showSystemUi = true, widthDp = 360, heightDp = 800)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewAlumnoMovil.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewAlumnoMovil() { EduTaskTheme(darkTheme = false, dynamicColor = false) { HomeAlumnoScreen() } }
 
 @Preview(name = "Home Alumno Tablet", showBackground = true, showSystemUi = true, widthDp = 800, heightDp = 1280)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewAlumnoTablet.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewAlumnoTablet() { EduTaskTheme(darkTheme = false, dynamicColor = false) { HomeAlumnoScreen() } }

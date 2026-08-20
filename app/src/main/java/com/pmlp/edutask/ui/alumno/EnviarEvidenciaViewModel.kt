@@ -1,6 +1,9 @@
 /**
  * ViewModel encargado de gestionar la logica de subida y registro de evidencias en Firestore,
  * controlando los estados de carga, progreso y manejo de errores.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -61,6 +64,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
 
+    /**
+     * Metodo principal que ejecuta la operacion: cargarEvidenciaEnviada.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun cargarEvidenciaEnviada(idEvidencia: String) {
         if (idEvidencia.isBlank()) return
         viewModelScope.launch {
@@ -103,6 +112,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: anularEvidencia.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun anularEvidencia(idEvidencia: String, onSuccess: () -> Unit) {
         if (idEvidencia.isBlank()) return
         viewModelScope.launch {
@@ -121,6 +136,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
     }
 
     // ── Enviar evidencia ─────────────────────────────────────────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: enviarEvidencia.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun enviarEvidencia(
         context: android.content.Context,
         idAsignacion: String,
@@ -212,11 +233,23 @@ class EnviarEvidenciaViewModel : ViewModel() {
     }
 
     // ── Resetear estado (para re-intentar o navegar atrás) ──────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: resetState.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun resetState() {
         _uiState.value = EnviarEvidenciaUiState.Idle
     }
 
     // ── Helper privado: Bitmap → Base64 String (máx. 800×800, 60% JPEG) ──────
+    /**
+     * Metodo principal que ejecuta la operacion: bitmapToBase64.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val scaled = if (bitmap.width > 800 || bitmap.height > 800) {
             val ratio = minOf(800f / bitmap.width, 800f / bitmap.height)
@@ -235,6 +268,12 @@ class EnviarEvidenciaViewModel : ViewModel() {
     }
 
     // ── Helper privado: ByteArray → Base64 String ────────────────────────────
+    /**
+     * Metodo principal que ejecuta la operacion: bytesToBase64.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun bytesToBase64(bytes: ByteArray): String {
         return Base64.encodeToString(bytes, Base64.NO_WRAP)
     }

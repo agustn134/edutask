@@ -1,6 +1,9 @@
 /**
  * Pestana de inicio del alumno que presenta un resumen de bienvenida, proximas entregas,
  * avisos importantes y accesos rapidos a sus clases.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -29,6 +32,11 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente interno que renderiza el contenido de InicioContent.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun InicioContent(
     modifier: Modifier = Modifier, 
     pendientes: Int, 
@@ -138,6 +146,11 @@ fun InicioContent(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar EventoCarouselCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EventoCarouselCard(evento: Evento) {
     val dateFormat = SimpleDateFormat("dd MMM", Locale.getDefault())
     val fechaFormat = dateFormat.format(Date(evento.fechaPublicacion))

@@ -1,6 +1,9 @@
 /**
  * Configuracion del tema visual de Compose para la app movil, soportando modo claro/oscuro
  * y esquemas de color personalizados.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.theme
 
@@ -87,6 +90,12 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EduTaskTheme.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EduTaskTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,

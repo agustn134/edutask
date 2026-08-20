@@ -1,6 +1,9 @@
 /**
  * Modelos de datos compartidos (EstadisticaGrupo y PromedioMateria) para estructurar
  * las metricas y promedios calculados por grupo y tarea para el Dashboard de TV.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 

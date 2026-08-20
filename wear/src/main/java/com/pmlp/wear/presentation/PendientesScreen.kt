@@ -1,5 +1,8 @@
 /**
  * Pantalla para Wear OS que lista las tareas y evidencias pendientes de calificar.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.wear.presentation
 
@@ -21,6 +24,12 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 
 // ── Lista de evidencias pendientes ───────────────────────────────────────────
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla PendientesScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun PendientesScreen(
     nombreProfesor:    String,
     items:             List<EvidenciaPendiente>,
@@ -140,6 +149,12 @@ fun PendientesScreen(
 // ── Preview ──────────────────────────────────────────────────────────────────
 @WearPreviewDevices
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewPendientes.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewPendientes() {
     val mocks = listOf(
         EvidenciaPendiente("1", "María López",  "Ensayo Revolución"),

@@ -1,6 +1,9 @@
 /**
  * Pantalla con formulario para que el coordinador publique o actualice eventos y avisos
  * institucionales con titulo, fecha, descripcion, lugar e imagen.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -31,6 +34,12 @@ import com.pmlp.edutask.ui.EventosUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla FormularioEventoScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun FormularioEventoScreen(
     viewModel: EventosSharedViewModel,
     idEvento: String?,
@@ -338,6 +347,11 @@ fun FormularioEventoScreen(
     }
 }
 
+/**
+ * Realiza el procesamiento y conversion de archivos (compressImageToBase64).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun compressImageToBase64(context: Context, uri: Uri): String? {
     return try {
         val inputStream = context.contentResolver.openInputStream(uri) ?: return null

@@ -1,6 +1,9 @@
 /**
  * Pantalla que muestra el listado de alumnos inscritos en una clase especifica,
  * permitiendo al profesor gestionar inscripciones y revisar el progreso individual.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -37,6 +40,12 @@ data class AlumnoInfo(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla AlumnosClaseScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun AlumnosClaseScreen(
     idClase: String,
     nombreClase: String,

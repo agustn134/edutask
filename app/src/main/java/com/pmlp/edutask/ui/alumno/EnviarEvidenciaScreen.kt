@@ -1,6 +1,9 @@
 /**
  * Pantalla para que el alumno suba y envie la evidencia de una tarea asignada,
  * permitiendo adjuntar documentos/imagenes, redactar notas y confirmar la entrega.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -63,6 +66,12 @@ import com.pmlp.edutask.ui.components.VisorArchivoDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla EnviarEvidenciaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EnviarEvidenciaScreen(
     tarea:        Tarea,
     idAsignacion: String,
@@ -134,6 +143,12 @@ fun EnviarEvidenciaScreen(
         }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: addArchivo.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun addArchivo(archivo: ArchivoSubir) {
         if (archivosSubir.size < 3) {
             archivosSubir = archivosSubir + archivo
@@ -244,6 +259,11 @@ fun EnviarEvidenciaScreen(
         }
     }
 
+    /**
+     * Abre el recurso o vista abrirGaleria para la interaccion del usuario.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun abrirGaleria() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Android 13+: PickVisualMedia no necesita permisos, lanzar directo
@@ -924,6 +944,12 @@ fun EnviarEvidenciaScreen(
 }
 
 // ── Helper: crear URI segura para FileProvider ───────────────────────────────
+/**
+ * Metodo principal que ejecuta la operacion: crearUriParaFoto.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun crearUriParaFoto(context: Context): Uri {
     // Usar estrictamente caché interna para evitar el error de "Tarjeta SD" en emuladores
     val cacheDir = File(context.cacheDir, "camera").also { it.mkdirs() }
@@ -936,6 +962,11 @@ private fun crearUriParaFoto(context: Context): Uri {
 }
 
 // ── Helper: Decodificar Bitmap previniendo OutOfMemoryError (Crashes) ──────────
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeUriToSafeBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeUriToSafeBitmap(context: Context, uri: Uri): Bitmap? {
     return try {
         // 1. Decodificar solo los límites para obtener las dimensiones reales
@@ -969,6 +1000,11 @@ private fun decodeUriToSafeBitmap(context: Context, uri: Uri): Bitmap? {
 }
 
 // ── Helper: Obtener nombre de archivo de la URI ──────────────────────────────
+/**
+ * Obtiene o recupera datos asociados a getFileName desde la base de datos o API.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun getFileName(context: Context, uri: Uri): String {
     var result: String? = null
     if (uri.scheme == "content") {
@@ -995,6 +1031,11 @@ private fun getFileName(context: Context, uri: Uri): String {
 }
 
 // ── Helper: Decodificar Base64 a Bitmap ──────────────────────────────────────
+/**
+ * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     return try {
         val bytes = android.util.Base64.decode(base64Str, android.util.Base64.DEFAULT)
@@ -1004,6 +1045,11 @@ private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     }
 }
 
+/**
+ * Abre el recurso o vista abrirArchivoBase64 para la interaccion del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: String?) {
     try {
         val cleanString = if (base64Str.contains(",")) {
@@ -1032,6 +1078,12 @@ private fun abrirArchivoBase64(context: Context, base64Str: String, fileName: St
 @Preview(name = "Enviar Evidencia", showBackground = true, showSystemUi = true,
          widthDp = 360, heightDp = 800)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: PreviewEnviarEvidencia.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun PreviewEnviarEvidencia() {
     EduTaskTheme(darkTheme = false, dynamicColor = false) {
         EnviarEvidenciaScreen(

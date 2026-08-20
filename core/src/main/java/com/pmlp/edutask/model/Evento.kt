@@ -1,6 +1,9 @@
 /**
  * Modelo de datos compartido representativo de los eventos y avisos institucionales
  * publicados para la comunidad escolar.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 

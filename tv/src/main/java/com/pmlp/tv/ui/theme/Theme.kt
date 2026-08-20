@@ -1,5 +1,8 @@
 /**
  * Configuracion del tema de Compose para Android TV (androidx.tv.material3).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.tv.ui.theme
 
@@ -12,6 +15,12 @@ import androidx.tv.material3.darkColorScheme
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
+/**
+ * Metodo principal que ejecuta la operacion: EdutaskTheme.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EdutaskTheme(
     isInDarkTheme: Boolean = true,
     content: @Composable () -> Unit,

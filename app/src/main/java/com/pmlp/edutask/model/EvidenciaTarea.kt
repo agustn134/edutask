@@ -1,6 +1,9 @@
 /**
  * Modelo de datos para las evidencias entregadas por los alumnos,
  * almacenando enlaces de archivos, comentarios, fechas de entrega y estado de revision.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.model
 

@@ -1,6 +1,9 @@
 /**
  * ViewModel que administra el estado global del alumno (clases inscritas, tareas pendientes,
  * resumen academico y datos de sesion).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.alumno
 
@@ -66,6 +69,11 @@ class HomeAlumnoViewModel : ViewModel() {
 
     private var enrolledClassesNames = mutableListOf<String>()
 
+    /**
+     * Manejador de evento para la accion onCleared.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     override fun onCleared() {
         super.onCleared()
         asignacionesListener?.remove()
@@ -74,6 +82,11 @@ class HomeAlumnoViewModel : ViewModel() {
         tareasListener?.remove()
     }
 
+    /**
+     * Obtiene o recupera datos asociados a fetchUserData desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun fetchUserData(idUsuario: String) {
         if (idUsuario.isBlank()) {
             _uiState.value = HomeAlumnoState.Error("ID de usuario no válido")
@@ -93,6 +106,12 @@ class HomeAlumnoViewModel : ViewModel() {
         loadData(idUsuario)
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: refresh.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun refresh(idUsuario: String) {
         if (_isRefreshing.value) return
         viewModelScope.launch {
@@ -103,6 +122,11 @@ class HomeAlumnoViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Guarda o actualiza los datos de updateAccount en la base de datos.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun updateAccount(idUsuario: String, nuevoCorreo: String, nuevaContrasena: String, onComplete: (Boolean) -> Unit) {
         val updates = mutableMapOf<String, Any>("correo" to nuevoCorreo)
         if (nuevaContrasena.isNotBlank()) {
@@ -118,6 +142,12 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: scheduleReminders.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun scheduleReminders(context: Context, tareas: List<TareaItem>) {
         val now = System.currentTimeMillis()
         val twoHoursInMillis = 2 * 60 * 60 * 1000L
@@ -147,6 +177,11 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Obtiene o recupera datos asociados a loadData desde la base de datos o API.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun loadData(idUsuario: String) {
         // Iniciar la sincronización automática de nuevas tareas
         startAutoSync(idUsuario)
@@ -316,6 +351,12 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: startAutoSync.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     private fun startAutoSync(idUsuario: String) {
         inscripcionesListener?.remove()
         tareasListener?.remove()
@@ -391,6 +432,12 @@ class HomeAlumnoViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Metodo principal que ejecuta la operacion: unirseAClase.
+     * Contiene la logica de negocio y control de flujo.
+     * @param param Parametros de entrada (depende de la firma).
+     * @return Retorna el resultado de la operacion o Unit si es un componente.
+     */
     fun unirseAClase(codigoClase: String, idUsuario: String) {
         if (codigoClase.isBlank() || idUsuario.isBlank()) return
 

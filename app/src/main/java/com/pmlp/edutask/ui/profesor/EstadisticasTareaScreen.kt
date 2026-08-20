@@ -1,6 +1,9 @@
 /**
  * Pantalla de metricas y estadisticas de una tarea en particular (promedio de calificaciones,
  * tasa de entrega, alumnos evaluados y pendientes).
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.profesor
 
@@ -35,6 +38,12 @@ data class StudentGradeReport(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla EstadisticasTareaScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun EstadisticasTareaScreen(
     idTarea: String,
     tituloTarea: String,
@@ -376,11 +385,22 @@ fun EstadisticasTareaScreen(
     }
 }
 
+/**
+ * Metodo principal que ejecuta la operacion: tempAlumnosList.
+ * Contiene la logica de negocio y control de flujo.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun tempAlumnosList(list: List<StudentGradeReport>): List<StudentGradeReport> {
     return list.sortedBy { it.nombre }
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar StatCard.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 private fun StatCard(
     title: String,
     value: String,

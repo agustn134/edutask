@@ -1,6 +1,9 @@
 /**
  * Pantalla con el directorio de usuarios del sistema, permitiendo busquedas, filtros por rol
  * y gestion de cuentas de usuario.
+ 
+ * @author Agustin Parra, Carlos Palma
+ * @date Agosto 2026
  */
 package com.pmlp.edutask.ui.coordinador
 
@@ -23,6 +26,12 @@ import com.pmlp.edutask.model.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Componente de interfaz de usuario para la pantalla ListaUsuariosScreen.
+ * Muestra los elementos visuales y maneja las interacciones del usuario.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun ListaUsuariosScreen(
     viewModel: CoordinadorViewModel,
     filtroInicial: String, // "Alumno" o "Profesor"
@@ -112,6 +121,11 @@ fun ListaUsuariosScreen(
 }
 
 @Composable
+/**
+ * Componente visual reutilizable para renderizar UsuarioItem.
+ * @param param Parametros de entrada (depende de la firma).
+ * @return Retorna el resultado de la operacion o Unit si es un componente.
+ */
 fun UsuarioItem(
     usuario: Usuario,
     onEdit: () -> Unit,
