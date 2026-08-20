@@ -37,10 +37,13 @@ class MainActivitytv : ComponentActivity() {
 
     @OptIn(ExperimentalTvMaterial3Api::class)
     /**
-     * Manejador de evento para la accion onCreate.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Se ejecuta al arrancar el modulo de TV (Smart TV o Android TV).
+ * Inicializa el reproductor de musica de fondo (ExoPlayer) para ambientar la pantalla
+ * y lanza el contenedor principal de Jetpack Compose (`TVHomeScreen`) envuelto en una Surface
+ * que ocupa el ancho y alto maximos de la pantalla (10-foot UI).
+ *
+ * @param savedInstanceState Estado persistido en caso de que el sistema operativo recree la actividad.
+ */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -60,11 +63,11 @@ class MainActivitytv : ComponentActivity() {
     }
 
     /**
-     * Metodo principal que ejecuta la operacion: initializePlayer.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Configura e inicializa ExoPlayer, el motor multimedia de Android (Media3).
+ * Se encarga de cargar el himno institucional desde los recursos (`R.raw.himno`),
+ * configurarlo en modo de repeticion infinita (`REPEAT_MODE_ALL`) y darle play automaticamente (`playWhenReady`).
+ * Esto permite que el dashboard de TV se sienta vivo y dinamico en pasillos o recepciones.
+ */
     private fun initializePlayer() {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(this).build()
@@ -86,10 +89,11 @@ class MainActivitytv : ComponentActivity() {
     }
 
     /**
-     * Manejador de evento para la accion onDestroy.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Evento del ciclo de vida que se llama cuando se cierra la pantalla de TV.
+ * Su funcion principal es liberar recursos criticos, deteniendo la reproduccion de audio,
+ * vaciando la cola de MediaItems y destruyendo por completo la instancia de ExoPlayer
+ * para evitar fugas de memoria (memory leaks).
+ */
     override fun onDestroy() {
         super.onDestroy()
         exoPlayer?.stop()

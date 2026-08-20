@@ -16,10 +16,14 @@ import androidx.tv.material3.darkColorScheme
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: EdutaskTheme.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Gestor del arbol de temas visuales para la plataforma de Android TV.
+ * Dado que los televisores se usan comunmente en interiores y se prefieren fondos oscuros
+ * (dark UI) para no fatigar la vista, este metodo inyecta de forma incondicional
+ * el esquema `darkColorScheme()` compuesto por una paleta de colores violetas y púrpuras.
+ * Toda la interfaz del carrusel hereda estos tokens de diseno de manera automatica.
+ *
+ * @param isInDarkTheme Bandera condicional (ignorada practicamente al forzar DarkMode siempre en TV).
+ * @param content El sub-arbol completo de composables (UI) que sera afectado por este tema.
  */
 fun EdutaskTheme(
     isInDarkTheme: Boolean = true,
