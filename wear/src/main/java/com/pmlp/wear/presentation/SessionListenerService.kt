@@ -15,10 +15,14 @@ import com.google.android.gms.wearable.WearableListenerService
 
 class SessionListenerService : WearableListenerService() {
     /**
-     * Manejador de evento para la accion onDataChanged.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Escucha en segundo plano cualquier cambio en la capa de datos de Wearable Data Layer API.
+ * Su funcion especifica es detectar cuando la app movil (del telefono) envia o actualiza
+ * un evento a traves del path "/edutask/session". Si detecta un cambio, extrae el
+ * `idUsuario` (el ID del profesor logueado) y lo guarda localmente en SharedPreferences.
+ * Esto permite que el reloj "sepa" que profesor esta usando la app sin necesidad de un login manual en el reloj.
+ *
+ * @param dataEvents Buffer de eventos sincronizados desde el dispositivo movil.
+ */
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.d("SessionListenerService", "Data changed event received on wear")
         for (event in dataEvents) {

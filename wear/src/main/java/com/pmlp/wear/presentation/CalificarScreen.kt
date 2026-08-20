@@ -22,10 +22,16 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 // ── Pantalla de calificación rápida ──────────────────────────────────────────
 @Composable
 /**
- * Componente de interfaz de usuario para la pantalla CalificarScreen.
- * Muestra los elementos visuales y maneja las interacciones del usuario.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Pantalla de interaccion critica (Core Feature) del reloj.
+ * Le muestra al profesor los datos del estudiante, botones de acceso para abrir fotos,
+ * y lo mas importante: los botones de evaluacion numerica (10, 9, 8 o 0) para evaluar rapidamente la tarea
+ * con pocos toques. Almacena en memoria (confirmando = x) la calificacion seleccionada y lanza
+ * un dialogo de confirmacion para evitar toques accidentales o evaluaciones erroneas.
+ *
+ * @param evidencia El objeto EvidenciaPendiente con la informacion a evaluar.
+ * @param esCargando Bandera que activa un indicador circular de progreso y deshabilita botones si se esta subiendo la nota a Firebase.
+ * @param onCalificar Callback disparado cuando el profesor confirma finalmente la calificacion numerica.
+ * @param onVolver Callback ejecutado para retroceder a la lista de pendientes.
  */
 fun CalificarScreen(
     evidencia:   EvidenciaPendiente,
@@ -153,10 +159,15 @@ fun CalificarScreen(
 // ── Botón de calificación grande ─────────────────────────────────────────────
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: BotonNota.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Componente UI modular y reutilizable para pintar los botones de calificacion (10, 9, 8, 0).
+ * Facilita establecer un diseno uniforme (alturas fijas, tipografia gruesa) y permite
+ * la inyeccion dinamica de esquemas de colores (tertiary, primary, secondary, error) para una
+ * comunicacion visual mas clara segun la nota (verde para 10, rojo para 0).
+ *
+ * @param label El texto numerico del boton (ej. "10").
+ * @param colors Objeto de Compose que define el color de fondo y de texto del boton.
+ * @param onClick Accion ejecutada cuando el profesor presiona el boton en el smartwatch.
+ * @param modifier Modificador opcional para inyectar estilos extra de layout (padding, pesos, etc.).
  */
 private fun BotonNota(
     label:    String,
@@ -181,10 +192,14 @@ private fun BotonNota(
 // ── Paso de confirmación ──────────────────────────────────────────────────────
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: ConfirmacionCalificacion.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Vista de paso intermedio de seguridad.
+ * Cuando el profesor toca un boton numerico, se superpone esta vista preguntandole "Guardar nota?".
+ * Previene el fat-finger (toques accidentales muy comunes en relojes pequenos) y obliga
+ * a elegir 'Si' o 'No' (onConfirmar u onCancelar) antes de lanzar el update a la base de datos de Firebase.
+ *
+ * @param nota La calificacion numerica elegida que se somete a verificacion visual.
+ * @param onConfirmar Callback que lanza la actualizacion asincrona hacia Firestore.
+ * @param onCancelar Callback que limpia el estado y regresa la UI a la matriz de botones de calificacion.
  */
 private fun ConfirmacionCalificacion(
     nota:       Int,
@@ -234,10 +249,10 @@ private fun ConfirmacionCalificacion(
 @WearPreviewDevices
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: PreviewCalificar.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Herramienta de visualizacion para Android Studio (Tooling).
+ * Renderiza la pantalla 'CalificarScreen' inyectando un modelo de evidencia falso.
+ * Permite a los desarrolladores ajustar el padding, tipografia y colores de los botones
+ * sin tener que lanzar el emulador cada vez que hacen un cambio estético.
  */
 private fun PreviewCalificar() {
     CalificarScreen(

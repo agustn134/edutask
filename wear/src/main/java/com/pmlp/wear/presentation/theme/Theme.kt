@@ -11,10 +11,13 @@ import androidx.wear.compose.material3.MaterialTheme
 
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: EdutaskTheme.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Aplica el tema visual principal de EduTask para el modulo de Wear OS.
+ * Esta funcion se encarga de inyectar los colores, tipografias y formas
+ * proporcionados por MaterialTheme de Compose for Wear OS, asegurando
+ * que toda la interfaz sea coherente, de alto contraste y facil de leer
+ * en pantallas pequenas (circulares o cuadradas).
+ *
+ * @param content El contenido composable (pantallas, botones, etc.) que estara envuelto por este tema.
  */
 fun EdutaskTheme(
     content: @Composable () -> Unit

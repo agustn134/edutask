@@ -25,10 +25,14 @@ import androidx.wear.compose.ui.tooling.preview.WearPreviewDevices
 // ── Lista de evidencias pendientes ───────────────────────────────────────────
 @Composable
 /**
- * Componente de interfaz de usuario para la pantalla PendientesScreen.
- * Muestra los elementos visuales y maneja las interacciones del usuario.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Pantalla principal del smartwatch para el profesor que renderiza una lista desplazable (ScalingLazyColumn).
+ * Presenta un listado de todas las evidencias (tareas) que estan en estado "Pendiente" y requieren evaluacion.
+ * Los items de la lista tienen un efecto de escalado tipo carrusel (los extremos se ven mas pequenos) tipico
+ * del ecosistema Wear OS para mejorar el enfoque central.
+ *
+ * @param nombreProfesor Nombre del usuario activo (Profesor) para mostrar una bienvenida personalizada.
+ * @param items Coleccion (List) de objetos EvidenciaPendiente que se iteraran para generar la UI.
+ * @param onSeleccionarEvidencia Accion disparada al hacer clic sobre una de las tareas pendientes.
  */
 fun PendientesScreen(
     nombreProfesor:    String,
@@ -150,10 +154,9 @@ fun PendientesScreen(
 @WearPreviewDevices
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: PreviewPendientes.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Funcion auxiliar para uso del desarrollador (Tooling).
+ * Provee datos ficticios para poder previsualizar (renderizar) la pantalla de "PendientesScreen"
+ * directamente en el editor (Android Studio) sin tener que compilar ni ejecutar el emulador del reloj.
  */
 private fun PreviewPendientes() {
     val mocks = listOf(

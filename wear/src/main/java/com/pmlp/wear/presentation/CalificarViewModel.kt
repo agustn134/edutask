@@ -48,11 +48,11 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
     init { cargarPendientes() }
 
     /**
-     * Metodo principal que ejecuta la operacion: cargarPendientes.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Funcion asincrona (Coroutine) que se conecta con la coleccion 'Evidencias' de Firestore.
+ * Realiza una consulta (Query) buscando aquellas evidencias que correspondan a las clases de este profesor
+ * y cuyo campo 'estado' sea equivalente a 'Pendiente'. Al recibirlas, muta la variable StateFlow _uiState
+ * a CalificarUiState.Exito, forzando a Compose a redibujar la pantalla de lista (PendientesScreen).
+ */
     fun cargarPendientes() {
         viewModelScope.launch {
             _uiState.value = CalificarUiState.Cargando
@@ -149,11 +149,15 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
 
     // ── Guardar calificación ─────────────────────────────────────────────────
     /**
-     * Metodo principal que ejecuta la operacion: calificar.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Metodo central de logica de negocio (Business Logic) responsable de procesar la evaluacion del profesor.
+ * Ejecuta una transaccion o actualizacion asincrona hacia Firestore apuntando al ID de la evidencia elegida.
+ * Modifica dos campos en la nube: 'estado' (lo pasa de "Pendiente" a "Calificado") y 'calificacion' (asigna la nota numerica).
+ * Una vez finalizado el proceso de subida con exito, dispara la devolucion de llamada (onDone).
+ *
+ * @param idEvidencia String que contiene el identificador unico del documento en la base de datos (Firestore).
+ * @param nota Numero entero (int) otorgado por el profesor.
+ * @param onDone Evento (Unit) que avisa a la UI que la transaccion ha culminado, util para retroceder la navegacion.
+ */
     fun calificar(idEvidencia: String, nota: Int, onDone: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = CalificarUiState.Cargando
@@ -193,10 +197,9 @@ class CalificarViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /**
-     * Metodo principal que ejecuta la operacion: resetEstado.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Regresa el manejador de estados internos (_uiState) del ViewModel a su valor inactivo original (Idle).
+ * Utilizado por lo general para prevenir que un estado anterior persistente (por ejemplo, Exito o Cargando)
+ * interfiera de forma anomala al volver a abrir una pantalla o cancelar un proceso.
+ */
     fun resetEstado() { _uiState.value = CalificarUiState.Idle }
 }

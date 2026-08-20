@@ -45,10 +45,12 @@ import com.pmlp.wear.presentation.theme.EdutaskTheme
 
 class MainActivity : ComponentActivity() {
     /**
-     * Manejador de evento para la accion onCreate.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Se ejecuta al iniciar la aplicacion en la pantalla del smartwatch.
+ * Establece el tema visual base llamando a `EdutaskTheme` e infla el
+ * composable raiz `EduTaskWearApp`, el cual gestiona la navegacion general de las pantallas.
+ *
+ * @param savedInstanceState Estado de la instancia previo, en caso de que la Activity haya sido recreada por el SO.
+ */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -91,10 +93,10 @@ private sealed class WearDestino {
 
 @Composable
 /**
- * Metodo principal que ejecuta la operacion: EduTaskWearApp.
- * Contiene la logica de negocio y control de flujo.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Contenedor principal y motor de navegacion para la app de Wear OS.
+ * Implementa SwipeDismissableNavHost para permitir que el usuario retroceda
+ * deslizando el dedo desde el borde izquierdo (comportamiento estandar en Wear OS).
+ * Declara las rutas disponibles: listado de pendientes, detalle/calificacion de evidencia, y visor de imagenes.
  */
 fun EduTaskWearApp() {
     val vm: CalificarViewModel = viewModel()
@@ -321,10 +323,12 @@ fun EduTaskWearApp() {
 
 @Composable
 /**
- * Componente de interfaz de usuario para la pantalla NuevaEntregaScreen.
- * Muestra los elementos visuales y maneja las interacciones del usuario.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Pantalla (Composable) que notifica o muestra el resumen detallado de una entrega
+ * a traves de informacion estatica. En esta version de la app, actua como una vista
+ * rapida para entender de que se trata la tarea y quien la envia, antes de entrar a evaluarla.
+ *
+ * @param nombreAlumno Nombre del alumno que realizo la entrega.
+ * @param tituloTarea Nombre o titulo asignado a la tarea original.
  */
 fun NuevaEntregaScreen(
     nombreAlumno: String,
@@ -422,10 +426,14 @@ fun NuevaEntregaScreen(
 
 @Composable
 /**
- * Componente de interfaz de usuario para la pantalla VerFotoScreen.
- * Muestra los elementos visuales y maneja las interacciones del usuario.
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Pantalla interactiva disenada exclusivamente para visualizar las imagenes enviadas
+ * por el alumno, adaptadas al tamano limitado del smartwatch.
+ * Decodifica las cadenas en Base64, convierte la imagen a un Bitmap de Android, y
+ * gestiona un estado de paginacion (anterior/siguiente) para navegar por multiples fotos
+ * usando botones grandes y comodos en la interfaz de Wear OS.
+ *
+ * @param fotos Lista de cadenas de texto en formato Base64 que representan las imagenes adjuntas.
+ * @param onVolver Callback o accion disparada cuando el usuario decide salir del visor de fotos.
  */
 fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
     var currentIndex by remember { mutableStateOf(0) }
@@ -534,9 +542,12 @@ fun VerFotoScreen(fotos: List<String>, onVolver: () -> Unit) {
 }
 
 /**
- * Realiza el procesamiento y conversion de archivos (decodeBase64ToBitmap).
- * @param param Parametros de entrada (depende de la firma).
- * @return Retorna el resultado de la operacion o Unit si es un componente.
+ * Transforma un string de imagen en codificacion Base64 hacia un objeto Bitmap nativo de Android.
+ * Esto es necesario para poder renderizar las fotos descargadas de Firestore directamente en
+ * un componente visual como `Image` dentro del contexto de Compose for Wear OS.
+ *
+ * @param base64Str Cadena de texto que contiene la informacion de la imagen codificada en Base64.
+ * @return El objeto Bitmap listo para dibujarse en pantalla, o null si el string es invalido o corrupto.
  */
 private fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
     return try {

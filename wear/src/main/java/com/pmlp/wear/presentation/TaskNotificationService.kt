@@ -35,17 +35,21 @@ class TaskNotificationService : Service() {
     private var prefListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     /**
-     * Manejador de evento para la accion onBind.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Vincula el servicio al componente que lo invoca.
+ * En este caso, como es un servicio en segundo plano basado en Firebase/Background,
+ * no requerimos que un cliente se enlace directamente a el mediante IPC, por lo que retorna null.
+ *
+ * @param intent La intencion (Intent) con la que se solicito el enlace.
+ * @return Siempre null, indicando que no soporta enlaces (binding) directos.
+ */
     override fun onBind(intent: Intent?): IBinder? = null
 
     /**
-     * Manejador de evento para la accion onCreate.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Se invoca una unica vez cuando el sistema operativo Android Wear crea este servicio.
+ * Su proposito es inicializar los componentes esenciales en segundo plano:
+ * 1. Crea el canal de notificaciones necesario para Android Oreo (API 26) o superior.
+ * 2. Inicia la escucha de base de datos (`startListening()`) para monitorear nuevas entregas.
+ */
     override fun onCreate() {
         super.onCreate()
         Log.d("TaskNotificationService", "Service created")
@@ -54,11 +58,11 @@ class TaskNotificationService : Service() {
     }
 
     /**
-     * Metodo principal que ejecuta la operacion: createNotificationChannel.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Registra un canal de notificaciones ("edutask_wear_channel") en el sistema operativo Android.
+ * Esto es un requisito obligatorio de Android a partir de la version 8.0 (Oreo).
+ * Configura la importancia de las alertas como 'HIGH' (alta) para asegurar que el reloj
+ * vibre y despierte la pantalla cuando el profesor reciba una notificacion de tarea.
+ */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -74,11 +78,12 @@ class TaskNotificationService : Service() {
     }
 
     /**
-     * Metodo principal que ejecuta la operacion: startListening.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Establece una conexion activa (listener) con Firebase Cloud Firestore.
+ * Su proposito principal es monitorear en tiempo real la coleccion "Evidencias",
+ * buscando documentos que coincidan con el `idUsuario` del profesor y cuyo estado sea "Pendiente".
+ * Cuando detecta una nueva evidencia (y salta la carga inicial), extrae los datos del alumno y la tarea,
+ * y dispara la funcion `showNotification()` para alertar al maestro.
+ */
     private fun startListening() {
         val prefs = getSharedPreferences("edutask_wear_prefs", Context.MODE_PRIVATE)
         val idProfesor = prefs.getString("idUsuario", "profesor_001") ?: "profesor_001"
@@ -157,11 +162,15 @@ class TaskNotificationService : Service() {
     }
 
     /**
-     * Metodo principal que ejecuta la operacion: showNotification.
-     * Contiene la logica de negocio y control de flujo.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Construye y emite una notificacion nativa en el smartwatch del profesor.
+ * Genera un Intent que abrira la clase `MainActivity` (la app de Wear OS) al tocar la notificacion.
+ * Ademas, aplica el icono de la aplicacion y un texto dinamico informando que un alumno
+ * ha entregado una tarea especifica.
+ *
+ * @param alumno Nombre del alumno que realizo la entrega.
+ * @param tarea Titulo de la tarea entregada.
+ * @param tieneArchivosNoImagen Booleano que indica si la entrega tiene adjuntos incompatibles con imagenes simples.
+ */
     private fun showNotification(alumno: String, tarea: String, tieneArchivosNoImagen: Boolean) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -193,10 +202,10 @@ class TaskNotificationService : Service() {
     }
 
     /**
-     * Manejador de evento para la accion onDestroy.
-     * @param param Parametros de entrada (depende de la firma).
-     * @return Retorna el resultado de la operacion o Unit si es un componente.
-     */
+ * Se invoca cuando el sistema operativo destruye este servicio para liberar memoria.
+ * Su tarea es hacer limpieza (cleanup) eliminando el listener de Firestore (`listener?.remove()`)
+ * para evitar fugas de memoria y consumo innecesario de bateria en el reloj.
+ */
     override fun onDestroy() {
         super.onDestroy()
         listener?.remove()
